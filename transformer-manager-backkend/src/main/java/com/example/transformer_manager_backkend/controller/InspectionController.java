@@ -1,0 +1,99 @@
+package com.example.transformer_manager_backkend.controller;
+
+import com.example.transformer_manager_backkend.entity.Admin;
+import com.example.transformer_manager_backkend.entity.User;
+import com.example.transformer_manager_backkend.entity.Inspection;
+import com.example.transformer_manager_backkend.repository.AdminRepository;
+import com.example.transformer_manager_backkend.repository.UserRepository;
+import com.example.transformer_manager_backkend.service.InspectionService;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.security.Principal;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/inspections")
+@CrossOrigin(origins = "http://localhost:3000")
+public class InspectionController {
+
+    private final InspectionService inspectionService;
+    private final AdminRepository adminRepository;
+    private final UserRepository userRepository;
+
+    public InspectionController(InspectionService inspectionService,
+            AdminRepository adminRepository,
+            UserRepository userRepository) {
+        this.inspectionService = inspectionService;
+        this.adminRepository = adminRepository;
+        this.userRepository = userRepository;
+    }
+
+    @PostMapping
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<Inspection> createInspection(
+            @RequestParam("transformerRecordId") Long transformerRecordId,
+            @RequestParam(value = "notes", required = false) String notes,
+            @RequestParam(value = "images", required = false) List<MultipartFile> images,
+            Authentication authentication,
+            Principal principal) throws IOException {
+
+        // Determine if the user is an admin or regular user
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        Inspection inspection;
+        if (isAdmin) {
+            Admin admin = adminRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new RuntimeException("Admin not found"));
+            inspection = inspectionService.createInspectionByAdmin(
+                    transformerRecordId, notes, images, admin);
+        } else {
+            User user = userRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            inspection = inspectionService.createInspectionByUser(
+                    transformerRecordId, notes, images, user);
+        }
+
+        return ResponseEntity.ok(inspection);
+    }
+
+    @GetMapping("/transformer/{transformerRecordId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<List<Inspection>> getInspectionsByTransformerRecord(
+            @PathVariable Long transformerRecordId) {
+        return ResponseEntity.ok(inspectionService.getInspectionsByTransformerRecordId(transformerRecordId));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<Inspection> getInspectionById(@PathVariable Long id) {
+        return ResponseEntity.ok(inspectionService.getInspectionById(id));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<?> deleteInspection(@PathVariable Long id,
+            Authentication authentication,
+            Principal principal) throws IOException {
+
+        // Allow users to delete only their own inspections, admins can delete any
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        if (isAdmin) {
+            inspectionService.deleteInspection(id);
+        } else {
+            // For users, verify they are the ones who created the inspection
+            User user = userRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            inspectionService.deleteInspectionByUser(id, user);
+        }
+
+        return ResponseEntity.ok().build();
+    }
+}
