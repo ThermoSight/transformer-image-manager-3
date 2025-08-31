@@ -28,6 +28,7 @@ import {
   faCalendarAlt,
   faUser,
   faChevronDown,
+  faClock,
 } from "@fortawesome/free-solid-svg-icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
@@ -49,6 +50,22 @@ const InspectionList = () => {
 
   const navigate = useNavigate();
   const { token, isAuthenticated } = useAuth();
+
+  // Helper function to get inspection status
+  const getInspectionStatus = (inspection) => {
+    if (!inspection.inspectionDate) {
+      return { status: "Unknown", variant: "secondary" };
+    }
+
+    const inspectionDate = new Date(inspection.inspectionDate);
+    const createdDate = new Date(inspection.createdAt);
+
+    if (inspectionDate < createdDate) {
+      return { status: "Pending", variant: "warning" };
+    } else {
+      return { status: "Passed", variant: "success" };
+    }
+  };
 
   useEffect(() => {
     fetchTransformers();
@@ -293,7 +310,9 @@ const InspectionList = () => {
               <Table striped hover responsive className="moodle-table">
                 <thead>
                   <tr>
-                    <th>Date</th>
+                    <th>Inspection Date</th>
+                    <th>Added Date</th>
+                    <th>Status</th>
                     <th>Conducted By</th>
                     <th>Notes</th>
                     <th>Images</th>
@@ -301,54 +320,69 @@ const InspectionList = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {currentItems.map((inspection) => (
-                    <tr key={inspection.id}>
-                      <td>
-                        <FontAwesomeIcon
-                          icon={faCalendarAlt}
-                          className="me-2 text-muted"
-                        />
-                        {new Date(inspection.createdAt).toLocaleDateString()}
-                      </td>
-                      <td>
-                        <FontAwesomeIcon
-                          icon={faUser}
-                          className="me-2 text-muted"
-                        />
-                        {inspection.conductedBy?.displayName || "-"}
-                      </td>
-                      <td>{inspection.notes || "-"}</td>
-                      <td>
-                        <Badge bg="secondary">
-                          {inspection.images?.length || 0}
-                        </Badge>
-                      </td>
-                      <td>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          onClick={() =>
-                            navigate(`/inspections/${inspection.id}`)
-                          }
-                          className="me-2"
-                        >
-                          <FontAwesomeIcon icon={faEye} />
-                        </Button>
-                        {isAuthenticated && (
+                  {currentItems.map((inspection) => {
+                    const statusInfo = getInspectionStatus(inspection);
+                    return (
+                      <tr key={inspection.id}>
+                        <td>
+                          <FontAwesomeIcon
+                            icon={faCalendarAlt}
+                            className="me-2 text-muted"
+                          />
+                          {inspection.inspectionDate
+                            ? new Date(
+                                inspection.inspectionDate
+                              ).toLocaleDateString()
+                            : "-"}
+                        </td>
+                        <td>
+                          {new Date(inspection.createdAt).toLocaleDateString()}
+                        </td>
+                        <td>
+                          <Badge bg={statusInfo.variant}>
+                            {statusInfo.status}
+                          </Badge>
+                        </td>
+                        <td>
+                          <FontAwesomeIcon
+                            icon={faUser}
+                            className="me-2 text-muted"
+                          />
+                          {inspection.conductedBy?.displayName || "-"}
+                        </td>
+                        <td>{inspection.notes || "-"}</td>
+                        <td>
+                          <Badge bg="secondary">
+                            {inspection.images?.length || 0}
+                          </Badge>
+                        </td>
+                        <td>
                           <Button
-                            variant="outline-danger"
+                            variant="outline-primary"
                             size="sm"
-                            onClick={() => {
-                              setInspectionToDelete(inspection.id);
-                              setShowDeleteModal(true);
-                            }}
+                            onClick={() =>
+                              navigate(`/inspections/${inspection.id}`)
+                            }
+                            className="me-2"
                           >
-                            <FontAwesomeIcon icon={faTrash} />
+                            <FontAwesomeIcon icon={faEye} />
                           </Button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                          {isAuthenticated && (
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => {
+                                setInspectionToDelete(inspection.id);
+                                setShowDeleteModal(true);
+                              }}
+                            >
+                              <FontAwesomeIcon icon={faTrash} />
+                            </Button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </Table>
             </Card.Body>
@@ -357,68 +391,92 @@ const InspectionList = () => {
       ) : (
         <>
           <Row xs={1} md={2} lg={3} className="g-4">
-            {currentItems.map((inspection) => (
-              <Col key={inspection.id}>
-                <Card className="h-100 bg-light">
-                  <Card.Body>
-                    <Card.Title className="d-flex justify-content-between align-items-start">
-                      Inspection #{inspection.id}
-                      <Badge bg="primary">
-                        {new Date(inspection.createdAt).toLocaleDateString()}
-                      </Badge>
-                    </Card.Title>
+            {currentItems.map((inspection) => {
+              const statusInfo = getInspectionStatus(inspection);
+              return (
+                <Col key={inspection.id}>
+                  <Card className="h-100 bg-light">
+                    <Card.Body>
+                      <Card.Title className="d-flex justify-content-between align-items-start">
+                        <div>
+                          Inspection #{inspection.id}
+                          <div className="mt-1">
+                            <Badge bg={statusInfo.variant} className="me-2">
+                              {statusInfo.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        <Badge bg="secondary">
+                          {new Date(inspection.createdAt).toLocaleDateString()}
+                        </Badge>
+                      </Card.Title>
 
-                    <div className="d-flex justify-content-between text-muted mb-3">
-                      <div>
-                        <FontAwesomeIcon icon={faUser} className="me-2" />
-                        <small>
-                          {inspection.conductedBy?.displayName || "Unknown"}
-                        </small>
-                      </div>
-                    </div>
-
-                    {inspection.notes && (
-                      <Card.Text className="mb-3">
-                        {inspection.notes.length > 100
-                          ? `${inspection.notes.substring(0, 100)}...`
-                          : inspection.notes}
-                      </Card.Text>
-                    )}
-
-                    <div className="d-flex justify-content-between align-items-center">
-                      <Badge bg="secondary">
-                        {inspection.images?.length || 0} images
-                      </Badge>
-
-                      <div>
-                        <Button
-                          variant="outline-primary"
-                          size="sm"
-                          onClick={() =>
-                            navigate(`/inspections/${inspection.id}`)
-                          }
-                          className="me-2"
-                        >
-                          <FontAwesomeIcon icon={faEye} />
-                        </Button>
-                        {isAuthenticated && (
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
-                            onClick={() => {
-                              setInspectionToDelete(inspection.id);
-                              setShowDeleteModal(true);
-                            }}
-                          >
-                            <FontAwesomeIcon icon={faTrash} />
-                          </Button>
+                      <div className="mb-3">
+                        {inspection.inspectionDate && (
+                          <div className="text-muted mb-2">
+                            <FontAwesomeIcon
+                              icon={faCalendarAlt}
+                              className="me-2"
+                            />
+                            <small>
+                              Inspection:{" "}
+                              {new Date(
+                                inspection.inspectionDate
+                              ).toLocaleDateString()}
+                            </small>
+                          </div>
                         )}
+                        <div className="text-muted">
+                          <FontAwesomeIcon icon={faUser} className="me-2" />
+                          <small>
+                            {inspection.conductedBy?.displayName || "Unknown"}
+                          </small>
+                        </div>
                       </div>
-                    </div>
-                  </Card.Body>
-                </Card>
-              </Col>
-            ))}
+
+                      {inspection.notes && (
+                        <Card.Text className="mb-3">
+                          {inspection.notes.length > 100
+                            ? `${inspection.notes.substring(0, 100)}...`
+                            : inspection.notes}
+                        </Card.Text>
+                      )}
+
+                      <div className="d-flex justify-content-between align-items-center">
+                        <Badge bg="info">
+                          {inspection.images?.length || 0} images
+                        </Badge>
+
+                        <div>
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() =>
+                              navigate(`/inspections/${inspection.id}`)
+                            }
+                            className="me-2"
+                          >
+                            <FontAwesomeIcon icon={faEye} />
+                          </Button>
+                          {isAuthenticated && (
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              onClick={() => {
+                                setInspectionToDelete(inspection.id);
+                                setShowDeleteModal(true);
+                              }}
+                            >
+                              <FontAwesomeIcon icon={faTrash} />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              );
+            })}
           </Row>
         </>
       )}

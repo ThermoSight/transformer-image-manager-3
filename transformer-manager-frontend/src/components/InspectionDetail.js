@@ -119,9 +119,16 @@ const InspectionDetail = () => {
                 <FontAwesomeIcon icon={faUser} className="me-2" />
                 Conducted by: {inspection.conductedBy?.displayName || "Unknown"}
               </div>
+              {inspection.inspectionDate && (
+                <div className="text-muted mb-3">
+                  <FontAwesomeIcon icon={faCalendar} className="me-2" />
+                  Inspection Date:{" "}
+                  {new Date(inspection.inspectionDate).toLocaleString()}
+                </div>
+              )}
               <div className="text-muted">
-                <FontAwesomeIcon icon={faCalendar} className="me-2" />
-                Conducted: {new Date(inspection.createdAt).toLocaleString()}
+                <FontAwesomeIcon icon={faClock} className="me-2" />
+                Added: {new Date(inspection.createdAt).toLocaleString()}
               </div>
             </div>
             <div>

@@ -39,8 +39,21 @@ public class InspectionController {
             @RequestParam("transformerRecordId") Long transformerRecordId,
             @RequestParam(value = "notes", required = false) String notes,
             @RequestParam(value = "images", required = false) List<MultipartFile> images,
+            @RequestParam(value = "inspectionDate", required = false) String inspectionDateStr,
             Authentication authentication,
             Principal principal) throws IOException {
+
+        // Parse inspection date, default to now if not provided
+        java.time.LocalDateTime inspectionDate = null;
+        if (inspectionDateStr != null && !inspectionDateStr.isEmpty()) {
+            try {
+                inspectionDate = java.time.LocalDateTime.parse(inspectionDateStr);
+            } catch (Exception e) {
+                inspectionDate = java.time.LocalDateTime.now();
+            }
+        } else {
+            inspectionDate = java.time.LocalDateTime.now();
+        }
 
         // Determine if the user is an admin or regular user
         boolean isAdmin = authentication.getAuthorities().stream()
@@ -51,12 +64,12 @@ public class InspectionController {
             Admin admin = adminRepository.findByUsername(principal.getName())
                     .orElseThrow(() -> new RuntimeException("Admin not found"));
             inspection = inspectionService.createInspectionByAdmin(
-                    transformerRecordId, notes, images, admin);
+                    transformerRecordId, notes, images, admin, inspectionDate);
         } else {
             User user = userRepository.findByUsername(principal.getName())
                     .orElseThrow(() -> new RuntimeException("User not found"));
             inspection = inspectionService.createInspectionByUser(
-                    transformerRecordId, notes, images, user);
+                    transformerRecordId, notes, images, user, inspectionDate);
         }
 
         return ResponseEntity.ok(inspection);

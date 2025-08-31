@@ -37,7 +37,8 @@ public class InspectionService {
             Long transformerRecordId,
             String notes,
             List<MultipartFile> maintenanceImages,
-            Admin conductedBy) throws IOException {
+            Admin conductedBy,
+            java.time.LocalDateTime inspectionDate) throws IOException {
 
         TransformerRecord transformerRecord = transformerRecordRepository.findById(transformerRecordId)
                 .orElseThrow(() -> new RuntimeException("Transformer record not found"));
@@ -46,6 +47,7 @@ public class InspectionService {
         inspection.setTransformerRecord(transformerRecord);
         inspection.setConductedByAdmin(conductedBy);
         inspection.setNotes(notes);
+        inspection.setInspectionDate(inspectionDate);
 
         List<Image> imageEntities = createImageEntities(maintenanceImages, inspection);
         inspection.setImages(imageEntities);
@@ -56,15 +58,17 @@ public class InspectionService {
             Long transformerRecordId,
             String notes,
             List<MultipartFile> maintenanceImages,
-            Admin conductedBy) throws IOException {
-        return createInspection(transformerRecordId, notes, maintenanceImages, conductedBy);
+            Admin conductedBy,
+            java.time.LocalDateTime inspectionDate) throws IOException {
+        return createInspection(transformerRecordId, notes, maintenanceImages, conductedBy, inspectionDate);
     }
 
     public Inspection createInspectionByUser(
             Long transformerRecordId,
             String notes,
             List<MultipartFile> maintenanceImages,
-            User conductedBy) throws IOException {
+            User conductedBy,
+            java.time.LocalDateTime inspectionDate) throws IOException {
 
         TransformerRecord transformerRecord = transformerRecordRepository.findById(transformerRecordId)
                 .orElseThrow(() -> new RuntimeException("Transformer record not found"));
@@ -73,6 +77,7 @@ public class InspectionService {
         inspection.setTransformerRecord(transformerRecord);
         inspection.setConductedByUser(conductedBy);
         inspection.setNotes(notes);
+        inspection.setInspectionDate(inspectionDate);
 
         List<Image> imageEntities = createImageEntities(maintenanceImages, inspection);
         inspection.setImages(imageEntities);

@@ -38,6 +38,9 @@ public class Inspection {
 
     private String notes;
 
+    // Date when the inspection was actually conducted (chosen by user)
+    private LocalDateTime inspectionDate;
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -127,5 +130,13 @@ public class Inspection {
 
     public void setNotes(String notes) {
         this.notes = notes;
+    }
+
+    public LocalDateTime getInspectionDate() {
+        return inspectionDate;
+    }
+
+    public void setInspectionDate(LocalDateTime inspectionDate) {
+        this.inspectionDate = inspectionDate;
     }
 }

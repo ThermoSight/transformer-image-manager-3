@@ -31,6 +31,7 @@ const InspectionUpload = ({ onUpload }) => {
     transformerRecordId: transformerId || "",
     notes: "",
     images: [],
+    inspectionDate: new Date().toISOString().slice(0, 16), // Default to current date/time in datetime-local format
   });
   const [transformers, setTransformers] = useState([]);
   const [selectedTransformer, setSelectedTransformer] = useState(null);
@@ -127,6 +128,10 @@ const InspectionUpload = ({ onUpload }) => {
       const data = new FormData();
       data.append("transformerRecordId", formData.transformerRecordId);
       data.append("notes", formData.notes);
+      data.append(
+        "inspectionDate",
+        new Date(formData.inspectionDate).toISOString()
+      );
 
       // Add images that have files
       formData.images.forEach((image) => {
@@ -290,7 +295,21 @@ const InspectionUpload = ({ onUpload }) => {
             </Row>
 
             <Row className="mb-4">
-              <Col md={12}>
+              <Col md={6}>
+                <Form.Group>
+                  <Form.Label>Inspection Date</Form.Label>
+                  <Form.Control
+                    type="datetime-local"
+                    name="inspectionDate"
+                    value={formData.inspectionDate}
+                    onChange={handleInputChange}
+                  />
+                  <Form.Text className="text-muted">
+                    Select the date and time when the inspection was conducted
+                  </Form.Text>
+                </Form.Group>
+              </Col>
+              <Col md={6}>
                 <Form.Group>
                   <Form.Label>Notes (Optional)</Form.Label>
                   <Form.Control
