@@ -33,7 +33,9 @@ import {
   faThLarge,
   faBolt,
   faHashtag,
+  faStar,
 } from "@fortawesome/free-solid-svg-icons";
+import { faStar as faStarRegular } from "@fortawesome/free-regular-svg-icons";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 
@@ -53,10 +55,28 @@ const TransformerList = () => {
     direction: "desc",
   });
   const [capacityFilter, setCapacityFilter] = useState("all");
+  const [starredFilter, setStarredFilter] = useState("all"); // 'all', 'starred', 'unstarred'
   const [viewMode, setViewMode] = useState("cards"); // 'cards' or 'table'
 
   const navigate = useNavigate();
   const { token, isAuthenticated, isAdmin } = useAuth();
+
+  const toggleStar = async (recordId, currentStarred) => {
+    try {
+      const config = {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      };
+      await axios.patch(
+        `http://localhost:8080/api/transformer-records/${recordId}/toggle-star`,
+        {},
+        config
+      );
+      // Refresh the records to show updated star status
+      fetchTransformerRecords();
+    } catch (err) {
+      setError("Failed to update star status");
+    }
+  };
 
   useEffect(() => {
     fetchTransformerRecords();
@@ -127,6 +147,18 @@ const TransformerList = () => {
       });
     }
 
+    // Apply starred filter
+    if (starredFilter !== "all") {
+      result = result.filter((record) => {
+        if (starredFilter === "starred") {
+          return record.starred === true;
+        } else if (starredFilter === "unstarred") {
+          return record.starred !== true;
+        }
+        return true;
+      });
+    }
+
     // Apply sorting
     if (sortConfig.key) {
       result.sort((a, b) => {
@@ -142,7 +174,14 @@ const TransformerList = () => {
 
     setFilteredRecords(result);
     setCurrentPage(1); // Reset to first page when filters change
-  }, [transformerRecords, searchTerm, searchField, capacityFilter, sortConfig]);
+  }, [
+    transformerRecords,
+    searchTerm,
+    searchField,
+    capacityFilter,
+    starredFilter,
+    sortConfig,
+  ]);
 
   const handleDelete = async (id) => {
     try {
@@ -266,7 +305,7 @@ const TransformerList = () => {
                 </Button>
               </InputGroup>
             </Col>
-            <Col md={3}>
+            <Col md={2}>
               <Dropdown>
                 <Dropdown.Toggle variant="outline-secondary">
                   <FontAwesomeIcon icon={faFilter} className="me-2" />
@@ -291,7 +330,28 @@ const TransformerList = () => {
                 </Dropdown.Menu>
               </Dropdown>
             </Col>
-            <Col md={3}>
+            <Col md={2}>
+              <Dropdown>
+                <Dropdown.Toggle variant="outline-secondary">
+                  <FontAwesomeIcon icon={faStar} className="me-2" />
+                  Stars: {starredFilter === "all" && "All"}
+                  {starredFilter === "starred" && "Starred"}
+                  {starredFilter === "unstarred" && "Unstarred"}
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  <Dropdown.Item onClick={() => setStarredFilter("all")}>
+                    All
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => setStarredFilter("starred")}>
+                    Starred Only
+                  </Dropdown.Item>
+                  <Dropdown.Item onClick={() => setStarredFilter("unstarred")}>
+                    Unstarred Only
+                  </Dropdown.Item>
+                </Dropdown.Menu>
+              </Dropdown>
+            </Col>
+            <Col md={2}>
               <Dropdown>
                 <Dropdown.Toggle variant="outline-secondary">
                   <FontAwesomeIcon icon={faSort} className="me-2" />
@@ -337,6 +397,7 @@ const TransformerList = () => {
               onClick={() => {
                 setSearchTerm("");
                 setCapacityFilter("all");
+                setStarredFilter("all");
               }}
             >
               Clear filters
@@ -419,6 +480,19 @@ const TransformerList = () => {
                       <td>{record.uploadedBy?.displayName || "-"}</td>
                       <td>{new Date(record.createdAt).toLocaleDateString()}</td>
                       <td>
+                        <Button
+                          variant={
+                            record.starred ? "warning" : "outline-warning"
+                          }
+                          size="sm"
+                          onClick={() => toggleStar(record.id, record.starred)}
+                          className="me-2"
+                          title={record.starred ? "Unstar" : "Star"}
+                        >
+                          <FontAwesomeIcon
+                            icon={record.starred ? faStar : faStarRegular}
+                          />
+                        </Button>
                         <Button
                           variant="outline-primary"
                           size="sm"
@@ -536,6 +610,19 @@ const TransformerList = () => {
                       </Badge>
 
                       <div>
+                        <Button
+                          variant={
+                            record.starred ? "warning" : "outline-warning"
+                          }
+                          size="sm"
+                          onClick={() => toggleStar(record.id, record.starred)}
+                          className="me-2"
+                          title={record.starred ? "Unstar" : "Star"}
+                        >
+                          <FontAwesomeIcon
+                            icon={record.starred ? faStar : faStarRegular}
+                          />
+                        </Button>
                         <Button
                           variant="outline-primary"
                           size="sm"

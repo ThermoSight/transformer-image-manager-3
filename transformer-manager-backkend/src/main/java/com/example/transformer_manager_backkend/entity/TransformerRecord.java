@@ -54,6 +54,9 @@ public class TransformerRecord {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
     private LocalDateTime createdAt;
 
+    @Column(nullable = false)
+    private Boolean starred = false;
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -149,5 +152,13 @@ public class TransformerRecord {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public Boolean getStarred() {
+        return starred;
+    }
+
+    public void setStarred(Boolean starred) {
+        this.starred = starred;
     }
 }

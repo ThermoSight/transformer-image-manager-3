@@ -174,6 +174,14 @@ public class TransformerRecordService {
         return transformerRecordRepository.save(transformerRecord);
     }
 
+    public TransformerRecord toggleStarred(Long id) {
+        TransformerRecord transformerRecord = transformerRecordRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Transformer record not found"));
+
+        transformerRecord.setStarred(!transformerRecord.getStarred());
+        return transformerRecordRepository.save(transformerRecord);
+    }
+
     public static class ImageDTO {
         public MultipartFile file;
         public String type;

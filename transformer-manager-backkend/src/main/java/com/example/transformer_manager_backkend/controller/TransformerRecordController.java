@@ -129,4 +129,11 @@ public class TransformerRecordController {
 
         return ResponseEntity.ok(updatedRecord);
     }
+
+    @PatchMapping("/{id}/toggle-star")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<TransformerRecord> toggleStarred(@PathVariable Long id) {
+        TransformerRecord updatedRecord = transformerRecordService.toggleStarred(id);
+        return ResponseEntity.ok(updatedRecord);
+    }
 }
