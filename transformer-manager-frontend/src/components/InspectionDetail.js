@@ -24,6 +24,7 @@ import {
   faTimes,
   faUpload,
 } from "@fortawesome/free-solid-svg-icons";
+import ImageViewer from "./ImageViewer";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 
@@ -35,8 +36,6 @@ const InspectionDetail = () => {
   const [transformerRecord, setTransformerRecord] = useState(null); // Add this state
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [previewImage, setPreviewImage] = useState(null);
-  const [showPreview, setShowPreview] = useState(false);
 
   // Image upload states
   const [showImageUpload, setShowImageUpload] = useState(false);
@@ -44,6 +43,12 @@ const InspectionDetail = () => {
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
+
+  // Image viewer states
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [viewerImages, setViewerImages] = useState([]);
+  const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0);
+  const [viewerTitle, setViewerTitle] = useState("");
 
   useEffect(() => {
     const fetchInspection = async () => {
@@ -102,6 +107,14 @@ const InspectionDetail = () => {
 
   // Get maintenance images from this inspection
   const maintenanceImages = inspection?.images || [];
+
+  // Image viewer handlers
+  const openImageViewer = (images, index = 0, title = "Images") => {
+    setViewerImages(images);
+    setViewerCurrentIndex(index);
+    setViewerTitle(title);
+    setShowImageViewer(true);
+  };
 
   // Image upload handlers
   const addImageField = () => {
@@ -344,10 +357,14 @@ const InspectionDetail = () => {
                               cursor: "pointer",
                             }}
                             onClick={() => {
-                              setPreviewImage(
-                                `http://localhost:8080${image.filePath}`
+                              const imageIndex = allImages.findIndex(
+                                (img) => img.id === image.id
                               );
-                              setShowPreview(true);
+                              openImageViewer(
+                                allImages,
+                                imageIndex,
+                                "Baseline Images"
+                              );
                             }}
                           />
                         </div>
@@ -418,10 +435,14 @@ const InspectionDetail = () => {
                               cursor: "pointer",
                             }}
                             onClick={() => {
-                              setPreviewImage(
-                                `http://localhost:8080${image.filePath}`
+                              const imageIndex = maintenanceImages.findIndex(
+                                (img) => img.id === image.id
                               );
-                              setShowPreview(true);
+                              openImageViewer(
+                                maintenanceImages,
+                                imageIndex,
+                                "Maintenance Images"
+                              );
                             }}
                           />
                         </div>
@@ -585,31 +606,14 @@ const InspectionDetail = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* Image Preview Modal */}
-      <Modal
-        show={showPreview}
-        onHide={() => setShowPreview(false)}
-        size="lg"
-        centered
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Image Preview</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="text-center">
-          {previewImage && (
-            <img
-              src={previewImage}
-              alt="Preview"
-              style={{ maxWidth: "100%", maxHeight: "70vh" }}
-            />
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowPreview(false)}>
-            Close
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {/* Advanced Image Viewer */}
+      <ImageViewer
+        show={showImageViewer}
+        onHide={() => setShowImageViewer(false)}
+        images={viewerImages}
+        currentIndex={viewerCurrentIndex}
+        title={viewerTitle}
+      />
     </div>
   );
 };

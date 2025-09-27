@@ -26,6 +26,7 @@ import {
   faEye,
   faPlus,
 } from "@fortawesome/free-solid-svg-icons";
+import ImageViewer from "./ImageViewer";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
@@ -50,8 +51,12 @@ const TransformerRecordDetail = () => {
   const [error, setError] = useState("");
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [imageToDelete, setImageToDelete] = useState(null);
-  const [previewImage, setPreviewImage] = useState(null);
-  const [showPreview, setShowPreview] = useState(false);
+
+  // Image viewer states
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [viewerImages, setViewerImages] = useState([]);
+  const [viewerCurrentIndex, setViewerCurrentIndex] = useState(0);
+  const [viewerTitle, setViewerTitle] = useState("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -83,6 +88,14 @@ const TransformerRecordDetail = () => {
 
     fetchData();
   }, [id, token]);
+
+  // Image viewer handler
+  const openImageViewer = (images, index = 0, title = "Images") => {
+    setViewerImages(images);
+    setViewerCurrentIndex(index);
+    setViewerTitle(title);
+    setShowImageViewer(true);
+  };
 
   const handleDeleteImage = async (imageId) => {
     try {
@@ -257,10 +270,15 @@ const TransformerRecordDetail = () => {
                               cursor: "pointer",
                             }}
                             onClick={() => {
-                              setPreviewImage(
-                                `http://localhost:8080${image.filePath}`
+                              const imageIndex =
+                                transformerRecord.images.findIndex(
+                                  (img) => img.id === image.id
+                                );
+                              openImageViewer(
+                                transformerRecord.images,
+                                imageIndex,
+                                "Baseline Images"
                               );
-                              setShowPreview(true);
                             }}
                           />
                         </div>
@@ -398,31 +416,14 @@ const TransformerRecordDetail = () => {
         </Modal.Footer>
       </Modal>
 
-      {/* Image Preview Modal */}
-      <Modal
-        show={showPreview}
-        onHide={() => setShowPreview(false)}
-        size="lg"
-        centered
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Image Preview</Modal.Title>
-        </Modal.Header>
-        <Modal.Body className="text-center">
-          {previewImage && (
-            <img
-              src={previewImage}
-              alt="Preview"
-              style={{ maxWidth: "100%", maxHeight: "70vh" }}
-            />
-          )}
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowPreview(false)}>
-            Close
-          </Button>
-        </Modal.Footer>
-      </Modal>
+      {/* Advanced Image Viewer */}
+      <ImageViewer
+        show={showImageViewer}
+        onHide={() => setShowImageViewer(false)}
+        images={viewerImages}
+        currentIndex={viewerCurrentIndex}
+        title={viewerTitle}
+      />
     </div>
   );
 };
