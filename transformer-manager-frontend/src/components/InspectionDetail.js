@@ -10,6 +10,7 @@ import {
   Alert,
   Badge,
   Image,
+  Form,
 } from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -19,6 +20,9 @@ import {
   faCalendar,
   faTrash,
   faClock,
+  faPlus,
+  faTimes,
+  faUpload,
 } from "@fortawesome/free-solid-svg-icons";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
@@ -34,15 +38,34 @@ const InspectionDetail = () => {
   const [previewImage, setPreviewImage] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
 
+  // Image upload states
+  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [newImages, setNewImages] = useState([]);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [uploadSuccess, setUploadSuccess] = useState("");
+
   useEffect(() => {
     const fetchInspection = async () => {
       try {
         setLoading(true);
+
+        // Check if user is authenticated
+        if (!isAuthenticated || !token) {
+          setError(
+            "Authentication required. Please log in to view inspection details."
+          );
+          return;
+        }
+
+        const config = {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        };
+
         const response = await axios.get(
           `http://localhost:8080/api/inspections/${id}`,
-          isAuthenticated
-            ? { headers: { Authorization: `Bearer ${token}` } }
-            : {}
+          config
         );
         setInspection(response.data);
 
@@ -50,29 +73,123 @@ const InspectionDetail = () => {
         if (response.data.transformerRecord?.id) {
           const transformerResponse = await axios.get(
             `http://localhost:8080/api/transformer-records/${response.data.transformerRecord.id}`,
-            isAuthenticated
-              ? { headers: { Authorization: `Bearer ${token}` } }
-              : {}
+            config
           );
           setTransformerRecord(transformerResponse.data);
         }
 
         setError("");
       } catch (err) {
-        setError("Failed to fetch inspection details");
+        if (err.response?.status === 403) {
+          setError(
+            "Access denied. You don't have permission to view this inspection."
+          );
+        } else if (err.response?.status === 401) {
+          setError("Authentication expired. Please log in again.");
+        } else {
+          setError("Failed to fetch inspection details");
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchInspection();
-  }, [id, token]);
+  }, [id, token, isAuthenticated]);
 
   // Get ALL images from transformer record (same as TransformerRecordDetail)
   const allImages = transformerRecord?.images || [];
 
   // Get maintenance images from this inspection
   const maintenanceImages = inspection?.images || [];
+
+  // Image upload handlers
+  const addImageField = () => {
+    setNewImages([...newImages, null]);
+  };
+
+  const removeImageField = (index) => {
+    const updatedImages = [...newImages];
+    updatedImages.splice(index, 1);
+    setNewImages(updatedImages);
+  };
+
+  const handleImageChange = (index, file) => {
+    const updatedImages = [...newImages];
+    updatedImages[index] = file;
+    setNewImages(updatedImages);
+  };
+
+  const handleImageUpload = async () => {
+    if (!isAuthenticated || !token) {
+      setUploadError("Authentication required. Please log in again.");
+      return;
+    }
+
+    const validImages = newImages.filter((img) => img !== null);
+    if (validImages.length === 0) {
+      setUploadError("Please select at least one image to upload.");
+      return;
+    }
+
+    setUploadLoading(true);
+    setUploadError("");
+    setUploadSuccess("");
+
+    try {
+      const formData = new FormData();
+      validImages.forEach((image) => {
+        formData.append("images", image);
+      });
+
+      const config = {
+        headers: {
+          "Content-Type": "multipart/form-data",
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      };
+
+      await axios.post(
+        `http://localhost:8080/api/inspections/${id}/images`,
+        formData,
+        config
+      );
+
+      setUploadSuccess(`${validImages.length} image(s) uploaded successfully!`);
+
+      // Refresh inspection data to show new images
+      const response = await axios.get(
+        `http://localhost:8080/api/inspections/${id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          withCredentials: true,
+        }
+      );
+      setInspection(response.data);
+
+      // Reset form
+      setNewImages([]);
+      setTimeout(() => {
+        setShowImageUpload(false);
+        setUploadSuccess("");
+      }, 2000);
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setUploadError(
+          "Session expired or insufficient permissions. Please log in again."
+        );
+      } else if (err.response?.status === 401) {
+        setUploadError("Authentication failed. Please log in again.");
+      } else {
+        setUploadError(
+          err.response?.data?.message || "Failed to upload images"
+        );
+      }
+    } finally {
+      setUploadLoading(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -85,9 +202,26 @@ const InspectionDetail = () => {
 
   if (error) {
     return (
-      <Alert variant="danger" className="mt-4">
-        {error}
-      </Alert>
+      <div className="moodle-container">
+        <Alert variant="danger" className="mt-4">
+          <Alert.Heading>Access Error</Alert.Heading>
+          <p>{error}</p>
+          {!isAuthenticated && (
+            <div className="mt-3">
+              <Button variant="primary" onClick={() => navigate("/login")}>
+                Go to Login
+              </Button>
+              <Button
+                variant="outline-secondary"
+                className="ms-2"
+                onClick={() => navigate(-1)}
+              >
+                Go Back
+              </Button>
+            </div>
+          )}
+        </Alert>
+      </div>
     );
   }
 
@@ -252,7 +386,21 @@ const InspectionDetail = () => {
 
             {/* Maintenance Images - Right Side */}
             <Col md={6}>
-              <h4 className="mb-3 text-center">Maintenance Images</h4>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <h4 className="mb-0 text-center flex-grow-1">
+                  Maintenance Images
+                </h4>
+                {isAuthenticated && (
+                  <Button
+                    variant="success"
+                    size="sm"
+                    onClick={() => setShowImageUpload(true)}
+                  >
+                    <FontAwesomeIcon icon={faPlus} className="me-2" />
+                    Add Images
+                  </Button>
+                )}
+              </div>
               {maintenanceImages.length > 0 ? (
                 <Row className="g-3">
                   {maintenanceImages.map((image) => (
@@ -306,6 +454,136 @@ const InspectionDetail = () => {
           </Row>
         </Card.Body>
       </Card>
+
+      {/* Image Upload Modal */}
+      <Modal
+        show={showImageUpload}
+        onHide={() => {
+          setShowImageUpload(false);
+          setNewImages([]);
+          setUploadError("");
+          setUploadSuccess("");
+        }}
+        size="lg"
+        centered
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>
+            <FontAwesomeIcon icon={faUpload} className="me-2" />
+            Add Images to Inspection
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {uploadError && (
+            <Alert
+              variant="danger"
+              dismissible
+              onClose={() => setUploadError("")}
+            >
+              {uploadError}
+            </Alert>
+          )}
+          {uploadSuccess && (
+            <Alert
+              variant="success"
+              dismissible
+              onClose={() => setUploadSuccess("")}
+            >
+              {uploadSuccess}
+            </Alert>
+          )}
+
+          <p className="text-muted mb-3">
+            Upload additional maintenance images for this inspection. These
+            images will be associated with the inspection and visible in the
+            maintenance images section.
+          </p>
+
+          {newImages.length === 0 && (
+            <Alert variant="info">
+              No images selected yet. Click "Add Image" below to select images
+              to upload.
+            </Alert>
+          )}
+
+          {newImages.map((img, index) => (
+            <Card key={index} className="mb-3">
+              <Card.Body>
+                <Row>
+                  <Col md={10}>
+                    <Form.Group>
+                      <Form.Label>
+                        Maintenance Image {index + 1} {img ? "(Selected)" : ""}
+                      </Form.Label>
+                      <Form.Control
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) =>
+                          handleImageChange(index, e.target.files[0])
+                        }
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={2} className="d-flex align-items-end">
+                    <Button
+                      variant="danger"
+                      onClick={() => removeImageField(index)}
+                      className="w-100"
+                    >
+                      <FontAwesomeIcon icon={faTimes} />
+                    </Button>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+          ))}
+
+          <div className="text-center">
+            <Button variant="outline-primary" onClick={addImageField}>
+              <FontAwesomeIcon icon={faPlus} className="me-2" />
+              Add Image
+            </Button>
+          </div>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              setShowImageUpload(false);
+              setNewImages([]);
+              setUploadError("");
+              setUploadSuccess("");
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="primary"
+            onClick={handleImageUpload}
+            disabled={
+              uploadLoading ||
+              newImages.filter((img) => img !== null).length === 0
+            }
+          >
+            {uploadLoading ? (
+              <>
+                <Spinner
+                  as="span"
+                  animation="border"
+                  size="sm"
+                  className="me-2"
+                />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <FontAwesomeIcon icon={faUpload} className="me-2" />
+                Upload Images
+              </>
+            )}
+          </Button>
+        </Modal.Footer>
+      </Modal>
 
       {/* Image Preview Modal */}
       <Modal

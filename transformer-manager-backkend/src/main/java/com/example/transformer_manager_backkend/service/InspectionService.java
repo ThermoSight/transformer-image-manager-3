@@ -138,6 +138,49 @@ public class InspectionService {
         inspectionRepository.deleteById(id);
     }
 
+    public Inspection addImagesToInspection(Long inspectionId, List<MultipartFile> newImages, Admin admin)
+            throws IOException {
+        Inspection inspection = inspectionRepository.findById(inspectionId)
+                .orElseThrow(() -> new RuntimeException("Inspection not found"));
+
+        // Create new image entities for the additional images
+        List<Image> additionalImageEntities = createImageEntities(newImages, inspection);
+
+        // Add new images to existing list
+        List<Image> existingImages = inspection.getImages();
+        if (existingImages == null) {
+            existingImages = new ArrayList<>();
+        }
+        existingImages.addAll(additionalImageEntities);
+        inspection.setImages(existingImages);
+
+        return inspectionRepository.save(inspection);
+    }
+
+    public Inspection addImagesToInspection(Long inspectionId, List<MultipartFile> newImages, User user)
+            throws IOException {
+        Inspection inspection = inspectionRepository.findById(inspectionId)
+                .orElseThrow(() -> new RuntimeException("Inspection not found"));
+
+        // Verify the user can add images to this inspection (either they created it or
+        // they're adding to any if they're admin)
+        // For simplicity, allow any authenticated user to add images to any inspection
+        // You can add more restrictive logic here if needed
+
+        // Create new image entities for the additional images
+        List<Image> additionalImageEntities = createImageEntities(newImages, inspection);
+
+        // Add new images to existing list
+        List<Image> existingImages = inspection.getImages();
+        if (existingImages == null) {
+            existingImages = new ArrayList<>();
+        }
+        existingImages.addAll(additionalImageEntities);
+        inspection.setImages(existingImages);
+
+        return inspectionRepository.save(inspection);
+    }
+
     private void deleteInspectionImages(Inspection inspection) throws IOException {
         // Delete associated images
         for (Image image : inspection.getImages()) {

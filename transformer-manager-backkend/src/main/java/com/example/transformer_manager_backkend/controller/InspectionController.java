@@ -88,6 +88,32 @@ public class InspectionController {
         return ResponseEntity.ok(inspectionService.getInspectionById(id));
     }
 
+    @PostMapping("/{id}/images")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<Inspection> addImagesToInspection(
+            @PathVariable Long id,
+            @RequestParam("images") List<MultipartFile> images,
+            Authentication authentication,
+            Principal principal) throws IOException {
+
+        // Determine if the user is an admin or regular user
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        Inspection updatedInspection;
+        if (isAdmin) {
+            Admin admin = adminRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new RuntimeException("Admin not found"));
+            updatedInspection = inspectionService.addImagesToInspection(id, images, admin);
+        } else {
+            User user = userRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            updatedInspection = inspectionService.addImagesToInspection(id, images, user);
+        }
+
+        return ResponseEntity.ok(updatedInspection);
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
     public ResponseEntity<?> deleteInspection(@PathVariable Long id,
