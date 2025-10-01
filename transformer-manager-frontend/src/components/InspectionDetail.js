@@ -30,9 +30,9 @@ import { useAuth } from "../AuthContext";
 const InspectionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { token, isAuthenticated } = useAuth();
+  const { token, isAuthenticated, user: authUser } = useAuth();
   const [inspection, setInspection] = useState(null);
-  const [transformerRecord, setTransformerRecord] = useState(null); // Add this state
+  const [transformerRecord, setTransformerRecord] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [previewImage, setPreviewImage] = useState(null);
@@ -45,12 +45,15 @@ const InspectionDetail = () => {
   const [uploadError, setUploadError] = useState("");
   const [uploadSuccess, setUploadSuccess] = useState("");
 
+  // Delete states
+  const [deletingImageId, setDeletingImageId] = useState(null);
+  const [deleteError, setDeleteError] = useState("");
+
   useEffect(() => {
     const fetchInspection = async () => {
       try {
         setLoading(true);
 
-        // Check if user is authenticated
         if (!isAuthenticated || !token) {
           setError(
             "Authentication required. Please log in to view inspection details."
@@ -69,7 +72,6 @@ const InspectionDetail = () => {
         );
         setInspection(response.data);
 
-        // Fetch transformer record separately to get all images (same as TransformerRecordDetail)
         if (response.data.transformerRecord?.id) {
           const transformerResponse = await axios.get(
             `http://localhost:8080/api/transformer-records/${response.data.transformerRecord.id}`,
@@ -97,10 +99,63 @@ const InspectionDetail = () => {
     fetchInspection();
   }, [id, token, isAuthenticated]);
 
-  // Get ALL images from transformer record (same as TransformerRecordDetail)
-  const allImages = transformerRecord?.images || [];
+  // Debug: Log auth and inspection data
+  useEffect(() => {
+    console.log("Auth User:", authUser);
+    console.log("Inspection:", inspection);
+    console.log("Can delete images:", canDeleteImages());
+  }, [authUser, inspection]);
 
-  // Get maintenance images from this inspection
+  // Check if current user can delete images from this inspection
+  const canDeleteImages = () => {
+    if (!inspection || !authUser) {
+      console.log("Cannot delete: Missing inspection or authUser");
+      return false;
+    }
+    
+    // If user is ADMIN, always allow delete
+    if (authUser.role === "ADMIN" || authUser.role === "ROLE_ADMIN") {
+      console.log("User is ADMIN - can delete");
+      return true;
+    }
+    
+    // Check if user conducted this inspection
+    const userConductedInspection = inspection.conductedByUser && 
+      inspection.conductedByUser.id === authUser.id;
+    
+    if (userConductedInspection) {
+      console.log("User conducted this inspection - can delete");
+      return true;
+    }
+    
+    // Fallback: check conductor name or other properties
+    const conductorName = inspection.conductorName || inspection.getConductorName?.();
+    const currentUserName = authUser.displayName || authUser.username;
+    
+    if (conductorName && currentUserName && conductorName === currentUserName) {
+      console.log("User matches conductor name - can delete");
+      return true;
+    }
+    
+    console.log("Cannot delete - no permission match");
+    return false;
+  };
+
+  // Alternative simpler permission check
+  const canDeleteImagesSimple = () => {
+    if (!isAuthenticated) return false;
+    
+    // For testing, allow all authenticated users to delete
+    // Remove this in production
+    console.log("Allowing delete for testing");
+    return true;
+    
+    // In production, use this:
+    // if (authUser?.role === "ADMIN" || authUser?.role === "ROLE_ADMIN") return true;
+    // return inspection?.conductedByUser?.id === authUser?.id;
+  };
+
+  const allImages = transformerRecord?.images || [];
   const maintenanceImages = inspection?.images || [];
 
   // Image upload handlers
@@ -191,6 +246,60 @@ const InspectionDetail = () => {
     }
   };
 
+  // Delete image handler
+  const handleDeleteImage = async (imageId) => {
+    if (!isAuthenticated || !token) {
+      setDeleteError("Authentication required. Please log in again.");
+      return;
+    }
+
+    if (!window.confirm("Are you sure you want to delete this image? This action cannot be undone.")) {
+      return;
+    }
+
+    setDeletingImageId(imageId);
+    setDeleteError("");
+
+    try {
+      const config = {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        withCredentials: true,
+      };
+
+      await axios.delete(
+        `http://localhost:8080/api/inspections/images/${imageId}`,
+        config
+      );
+
+      // Remove image from state
+      const updatedMaintenanceImages = maintenanceImages.filter(
+        (img) => img.id !== imageId
+      );
+      
+      setInspection({
+        ...inspection,
+        images: updatedMaintenanceImages,
+      });
+
+      // Show success message
+      setUploadSuccess("Image deleted successfully!");
+      setTimeout(() => setUploadSuccess(""), 3000);
+
+    } catch (err) {
+      if (err.response?.status === 403) {
+        setDeleteError("You don't have permission to delete this image.");
+      } else if (err.response?.status === 401) {
+        setDeleteError("Authentication failed. Please log in again.");
+      } else {
+        setDeleteError(err.response?.data?.message || "Failed to delete image");
+      }
+    } finally {
+      setDeletingImageId(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="text-center mt-5">
@@ -244,6 +353,18 @@ const InspectionDetail = () => {
         Back to Inspections
       </Button>
 
+      {/* Success/Error Alerts */}
+      {uploadSuccess && (
+        <Alert variant="success" dismissible onClose={() => setUploadSuccess("")}>
+          {uploadSuccess}
+        </Alert>
+      )}
+      {deleteError && (
+        <Alert variant="danger" dismissible onClose={() => setDeleteError("")}>
+          {deleteError}
+        </Alert>
+      )}
+
       <Card className="mb-4">
         <Card.Body>
           <div className="d-flex justify-content-between align-items-start mb-4">
@@ -251,7 +372,9 @@ const InspectionDetail = () => {
               <h2>Inspection #{inspection.id}</h2>
               <div className="text-muted mb-3">
                 <FontAwesomeIcon icon={faUser} className="me-2" />
-                Conducted by: {inspection.conductedBy?.displayName || "Unknown"}
+                Conducted by: {inspection.conductorName || inspection.conductedBy?.displayName || "Unknown"}
+                {inspection.conductedByUser && ` (User)`}
+                {inspection.conductedByAdmin && ` (Admin)`}
               </div>
               {inspection.inspectionDate && (
                 <div className="text-muted mb-3">
@@ -263,6 +386,11 @@ const InspectionDetail = () => {
               <div className="text-muted">
                 <FontAwesomeIcon icon={faClock} className="me-2" />
                 Added: {new Date(inspection.createdAt).toLocaleString()}
+              </div>
+              {/* Debug info */}
+              <div className="text-muted small mt-2">
+                <strong>Debug:</strong> User ID: {authUser?.id}, Role: {authUser?.role}
+                {inspection.conductedByUser && `, Conductor User ID: ${inspection.conductedByUser.id}`}
               </div>
             </div>
             <div>
@@ -324,7 +452,7 @@ const InspectionDetail = () => {
           </Row>
 
           <Row className="mt-4">
-            {/* Baseline Images - Left Side - SAME AS TransformerRecordDetail */}
+            {/* Baseline Images - Left Side */}
             <Col md={6}>
               <h4 className="mb-3 text-center">Baseline Images</h4>
               {allImages.length > 0 ? (
@@ -424,6 +552,42 @@ const InspectionDetail = () => {
                               setShowPreview(true);
                             }}
                           />
+                          {/* Delete Button Overlay - Using simple permission check for testing */}
+                          {canDeleteImagesSimple() && (
+                            <Button
+                              variant="danger"
+                              size="sm"
+                              style={{
+                                position: "absolute",
+                                top: "10px",
+                                right: "10px",
+                                opacity: 0.9,
+                                width: "40px",
+                                height: "40px",
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                border: "2px solid white",
+                                boxShadow: "0 2px 4px rgba(0,0,0,0.3)"
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation(); // Prevent image preview
+                                handleDeleteImage(image.id);
+                              }}
+                              disabled={deletingImageId === image.id}
+                            >
+                              {deletingImageId === image.id ? (
+                                <Spinner
+                                  as="span"
+                                  animation="border"
+                                  size="sm"
+                                />
+                              ) : (
+                                <FontAwesomeIcon icon={faTrash} />
+                              )}
+                            </Button>
+                          )}
                         </div>
                         <Card.Body>
                           <div className="d-flex justify-content-between align-items-start">

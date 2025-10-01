@@ -1,16 +1,5 @@
 package com.example.transformer_manager_backkend.service;
 
-import com.example.transformer_manager_backkend.entity.Admin;
-import com.example.transformer_manager_backkend.entity.User;
-import com.example.transformer_manager_backkend.entity.Image;
-import com.example.transformer_manager_backkend.entity.Inspection;
-import com.example.transformer_manager_backkend.entity.TransformerRecord;
-import com.example.transformer_manager_backkend.repository.InspectionRepository;
-import com.example.transformer_manager_backkend.repository.TransformerRecordRepository;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,19 +7,35 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.example.transformer_manager_backkend.entity.Admin;
+import com.example.transformer_manager_backkend.entity.Image;
+import com.example.transformer_manager_backkend.entity.Inspection;
+import com.example.transformer_manager_backkend.entity.TransformerRecord;
+import com.example.transformer_manager_backkend.entity.User;
+import com.example.transformer_manager_backkend.repository.ImageRepository;
+import com.example.transformer_manager_backkend.repository.InspectionRepository;
+import com.example.transformer_manager_backkend.repository.TransformerRecordRepository;
+
 @Service
 public class InspectionService {
 
     private final InspectionRepository inspectionRepository;
     private final TransformerRecordRepository transformerRecordRepository;
+    private final ImageRepository imageRepository;
 
     @Value("${upload.directory}")
     private String uploadDirectory;
 
     public InspectionService(InspectionRepository inspectionRepository,
-            TransformerRecordRepository transformerRecordRepository) {
+            TransformerRecordRepository transformerRecordRepository,
+            ImageRepository imageRepository) { // Add this
         this.inspectionRepository = inspectionRepository;
         this.transformerRecordRepository = transformerRecordRepository;
+        this.imageRepository = imageRepository; // Add this
     }
 
     public Inspection createInspection(
@@ -189,6 +194,51 @@ public class InspectionService {
                 Files.deleteIfExists(filePath);
             } catch (Exception ignore) {
             }
+        }
+    }
+
+    // Add this method to InspectionService
+    public void deleteInspectionImage(Long imageId, User user) throws IOException {
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new RuntimeException("Image not found"));
+        
+        // Verify the user can delete this image (either they created the inspection or they're admin)
+        Inspection inspection = image.getInspection();
+        if (inspection == null) {
+            throw new RuntimeException("Image is not associated with any inspection");
+        }
+        
+        // Check if user owns this inspection (if conducted by user)
+        if (inspection.getConductedByUser() != null && 
+            !inspection.getConductedByUser().getId().equals(user.getId())) {
+            throw new RuntimeException("You can only delete images from your own inspections");
+        }
+        
+        // For admin-conducted inspections, only admins can delete
+        if (inspection.getConductedByAdmin() != null && user instanceof User) {
+            throw new RuntimeException("Only admins can delete images from admin-conducted inspections");
+        }
+        
+        deleteImageFile(image);
+        imageRepository.deleteById(imageId);
+    }
+
+    public void deleteInspectionImage(Long imageId, Admin admin) throws IOException {
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new RuntimeException("Image not found"));
+        
+        // Admins can delete any image
+        deleteImageFile(image);
+        imageRepository.deleteById(imageId);
+    }
+
+    private void deleteImageFile(Image image) throws IOException {
+        try {
+            Path filePath = Paths.get(uploadDirectory, image.getFilePath().replace("/uploads/", ""));
+            Files.deleteIfExists(filePath);
+        } catch (Exception e) {
+            // Log the error but don't throw to allow DB record deletion
+            System.err.println("Failed to delete image file: " + e.getMessage());
         }
     }
 }
