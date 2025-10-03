@@ -4,3 +4,4 @@ automatic-anamoly-detection/TX/
 *.ckpt
 *.venv
 *.env
+!automatic-anamoly-detection/Model_Inference/config/patchcore_transformers.yaml

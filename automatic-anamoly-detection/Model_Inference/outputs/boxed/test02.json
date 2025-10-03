@@ -7,6 +7,26 @@
   "boxes": [
     {
       "box": [
+        160,
+        160,
+        320,
+        320
+      ],
+      "type": "Loose Joint (Faulty)",
+      "confidence": 0.773
+    },
+    {
+      "box": [
+        128,
+        177,
+        128,
+        230
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.66
+    },
+    {
+      "box": [
         129,
         0,
         122,
