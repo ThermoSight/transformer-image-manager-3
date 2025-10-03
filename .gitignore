@@ -1,3 +1,6 @@
 *.jpg
 *.png
 automatic-anamoly-detection/TX/
+*.ckpt
+*.venv
+*.env
