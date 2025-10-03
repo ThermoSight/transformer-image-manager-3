@@ -41,6 +41,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/test/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
+                        .requestMatchers("/analysis/**").permitAll()
+                        .requestMatchers("/api/files/uploads/**").permitAll()
+                        .requestMatchers("/api/files/analysis/**").permitAll()
+                        .requestMatchers("/api/files/**").hasAnyRole("ADMIN", "USER")
+                        .requestMatchers("/api/analysis/**").hasAnyRole("ADMIN", "USER")
                         // Only ADMIN can create, update, delete transformer records
                         .requestMatchers(HttpMethod.POST, "/api/transformer-records").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/transformer-records/**").hasRole("ADMIN")

@@ -68,7 +68,8 @@ public class FileController {
                 if (resource.exists() && resource.isReadable()) {
                     MediaType mediaType = getMediaTypeForFile(filename);
                     return ResponseEntity.ok()
-                            .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                            .header(HttpHeaders.CONTENT_DISPOSITION,
+                                    "inline; filename=\"" + resource.getFilename() + "\"")
                             .contentType(mediaType)
                             .body(resource);
                 } else {
@@ -81,8 +82,35 @@ public class FileController {
         }
     }
 
+    @GetMapping("/analysis/{filename:.+}")
+    public ResponseEntity<Resource> serveAnalysisFile(@PathVariable String filename) {
+        try {
+            // Security check - prevent directory traversal
+            if (filename.contains("..") || filename.contains("/") || filename.contains("\\")) {
+                return ResponseEntity.badRequest().build();
+            }
+
+            Path file = Paths.get("uploads", "analysis").resolve(filename);
+            Resource resource = new UrlResource(file.toUri());
+
+            if (resource.exists() && resource.isReadable()) {
+                MediaType mediaType = getMediaTypeForFile(filename);
+
+                return ResponseEntity.ok()
+                        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + resource.getFilename() + "\"")
+                        .contentType(mediaType)
+                        .body(resource);
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
+        }
+    }
+
     @GetMapping("/analysis/{subpath}/{filename:.+}")
-    public ResponseEntity<Resource> serveAnalysisFile(@PathVariable String subpath, @PathVariable String filename) {
+    public ResponseEntity<Resource> serveAnalysisFileWithSubpath(@PathVariable String subpath,
+            @PathVariable String filename) {
         try {
             // Security check - prevent directory traversal
             if (filename.contains("..") || subpath.contains("..") ||
