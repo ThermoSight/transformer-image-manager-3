@@ -39,6 +39,10 @@ public class Image {
     @JsonIgnoreProperties({ "images", "transformerRecord" })
     private Inspection inspection;
 
+    @OneToOne(mappedBy = "image", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({ "image" })
+    private AnalysisJob analysisJob;
+
     // Getters and Setters
     public Long getId() {
         return id;
@@ -94,5 +98,13 @@ public class Image {
 
     public void setInspection(Inspection inspection) {
         this.inspection = inspection;
+    }
+
+    public AnalysisJob getAnalysisJob() {
+        return analysisJob;
+    }
+
+    public void setAnalysisJob(AnalysisJob analysisJob) {
+        this.analysisJob = analysisJob;
     }
 }

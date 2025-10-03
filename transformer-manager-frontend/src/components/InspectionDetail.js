@@ -25,6 +25,7 @@ import {
   faUpload,
 } from "@fortawesome/free-solid-svg-icons";
 import ImageViewer from "./ImageViewer";
+import AnalysisDisplay from "./AnalysisDisplay";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext";
 
@@ -475,6 +476,12 @@ const InspectionDetail = () => {
           </Row>
         </Card.Body>
       </Card>
+
+      {/* Anomaly Analysis Section */}
+      <AnalysisDisplay
+        inspectionId={inspection.id}
+        images={maintenanceImages}
+      />
 
       {/* Image Upload Modal */}
       <Modal

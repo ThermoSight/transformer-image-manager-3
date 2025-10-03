@@ -17,6 +17,7 @@ import {
   faBolt,
   faClipboardCheck,
 } from "@fortawesome/free-solid-svg-icons";
+import QueueStatus from "./QueueStatus";
 
 const MoodleNavbar = () => {
   const { user, logout, isAuthenticated, isAdmin, role } = useAuth();
@@ -68,36 +69,44 @@ const MoodleNavbar = () => {
             )}
           </Nav>
 
-          {isAuthenticated && (
-            <Dropdown align="end">
-              <Dropdown.Toggle
-                variant="light"
-                id="dropdown-user"
-                className="d-flex align-items-center"
-              >
-                <span className="me-2">
-                  {user.displayName}
-                  {role && (
-                    <Badge bg={isAdmin ? "success" : "info"} className="ms-1">
-                      {role}
-                    </Badge>
-                  )}
-                </span>
-                <FontAwesomeIcon icon={faUser} />
-              </Dropdown.Toggle>
+          <div className="d-flex align-items-center">
+            {isAuthenticated && (
+              <>
+                <QueueStatus />
+                <Dropdown align="end" className="ms-2">
+                  <Dropdown.Toggle
+                    variant="light"
+                    id="dropdown-user"
+                    className="d-flex align-items-center"
+                  >
+                    <span className="me-2">
+                      {user.displayName}
+                      {role && (
+                        <Badge
+                          bg={isAdmin ? "success" : "info"}
+                          className="ms-1"
+                        >
+                          {role}
+                        </Badge>
+                      )}
+                    </span>
+                    <FontAwesomeIcon icon={faUser} />
+                  </Dropdown.Toggle>
 
-              <Dropdown.Menu>
-                <Dropdown.Item disabled>
-                  {user.username} ({role})
-                </Dropdown.Item>
-                <Dropdown.Divider />
-                <Dropdown.Item onClick={handleLogout}>
-                  <FontAwesomeIcon icon={faSignOutAlt} className="me-2" />
-                  Logout
-                </Dropdown.Item>
-              </Dropdown.Menu>
-            </Dropdown>
-          )}
+                  <Dropdown.Menu>
+                    <Dropdown.Item disabled>
+                      {user.username} ({role})
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
+                    <Dropdown.Item onClick={handleLogout}>
+                      <FontAwesomeIcon icon={faSignOutAlt} className="me-2" />
+                      Logout
+                    </Dropdown.Item>
+                  </Dropdown.Menu>
+                </Dropdown>
+              </>
+            )}
+          </div>
         </Navbar.Collapse>
       </Container>
     </Navbar>

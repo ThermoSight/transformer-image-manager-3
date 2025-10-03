@@ -23,14 +23,17 @@ public class InspectionService {
 
     private final InspectionRepository inspectionRepository;
     private final TransformerRecordRepository transformerRecordRepository;
+    private final AnomalyAnalysisService anomalyAnalysisService;
 
     @Value("${upload.directory}")
     private String uploadDirectory;
 
     public InspectionService(InspectionRepository inspectionRepository,
-            TransformerRecordRepository transformerRecordRepository) {
+            TransformerRecordRepository transformerRecordRepository,
+            AnomalyAnalysisService anomalyAnalysisService) {
         this.inspectionRepository = inspectionRepository;
         this.transformerRecordRepository = transformerRecordRepository;
+        this.anomalyAnalysisService = anomalyAnalysisService;
     }
 
     public Inspection createInspection(
@@ -51,7 +54,17 @@ public class InspectionService {
 
         List<Image> imageEntities = createImageEntities(maintenanceImages, inspection);
         inspection.setImages(imageEntities);
-        return inspectionRepository.save(inspection);
+
+        Inspection savedInspection = inspectionRepository.save(inspection);
+
+        // Queue maintenance images for anomaly analysis after saving
+        for (Image image : savedInspection.getImages()) {
+            if ("Maintenance".equalsIgnoreCase(image.getType())) {
+                anomalyAnalysisService.queueImageForAnalysis(image);
+            }
+        }
+
+        return savedInspection;
     }
 
     public Inspection createInspectionByAdmin(
@@ -81,7 +94,17 @@ public class InspectionService {
 
         List<Image> imageEntities = createImageEntities(maintenanceImages, inspection);
         inspection.setImages(imageEntities);
-        return inspectionRepository.save(inspection);
+
+        Inspection savedInspection = inspectionRepository.save(inspection);
+
+        // Queue maintenance images for anomaly analysis after saving
+        for (Image image : savedInspection.getImages()) {
+            if ("Maintenance".equalsIgnoreCase(image.getType())) {
+                anomalyAnalysisService.queueImageForAnalysis(image);
+            }
+        }
+
+        return savedInspection;
     }
 
     private List<Image> createImageEntities(List<MultipartFile> maintenanceImages, Inspection inspection)
@@ -154,7 +177,16 @@ public class InspectionService {
         existingImages.addAll(additionalImageEntities);
         inspection.setImages(existingImages);
 
-        return inspectionRepository.save(inspection);
+        Inspection savedInspection = inspectionRepository.save(inspection);
+
+        // Queue new maintenance images for anomaly analysis
+        for (Image image : additionalImageEntities) {
+            if ("Maintenance".equalsIgnoreCase(image.getType())) {
+                anomalyAnalysisService.queueImageForAnalysis(image);
+            }
+        }
+
+        return savedInspection;
     }
 
     public Inspection addImagesToInspection(Long inspectionId, List<MultipartFile> newImages, User user)
@@ -178,7 +210,16 @@ public class InspectionService {
         existingImages.addAll(additionalImageEntities);
         inspection.setImages(existingImages);
 
-        return inspectionRepository.save(inspection);
+        Inspection savedInspection = inspectionRepository.save(inspection);
+
+        // Queue new maintenance images for anomaly analysis
+        for (Image image : additionalImageEntities) {
+            if ("Maintenance".equalsIgnoreCase(image.getType())) {
+                anomalyAnalysisService.queueImageForAnalysis(image);
+            }
+        }
+
+        return savedInspection;
     }
 
     private void deleteInspectionImages(Inspection inspection) throws IOException {
