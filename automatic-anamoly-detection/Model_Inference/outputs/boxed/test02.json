@@ -1,0 +1,29 @@
+{
+  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference/test_image/test02.jpg",
+  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference/outputs/boxed/test02_boxed.jpg",
+  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference/outputs/masks/test02_mask.png",
+  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference/outputs/filtered/test02_filtered.png",
+  "label": "Loose Joint (Faulty)",
+  "boxes": [
+    {
+      "box": [
+        129,
+        0,
+        122,
+        77
+      ],
+      "type": "Point Overload (Potential)",
+      "confidence": 0.593
+    },
+    {
+      "box": [
+        282,
+        224,
+        83,
+        128
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.658
+    }
+  ]
+}
