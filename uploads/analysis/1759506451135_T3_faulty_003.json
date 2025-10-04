@@ -1,0 +1,59 @@
+{
+  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_63_1759506922830/input/1759506451135_T3_faulty_003.png",
+  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_63_1759506922830/output/boxed/1759506451135_T3_faulty_003_boxed.png",
+  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_63_1759506922830/output/masks/1759506451135_T3_faulty_003_mask.png",
+  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_63_1759506922830/output/filtered/1759506451135_T3_faulty_003_filtered.png",
+  "label": "Loose Joint (Faulty)",
+  "boxes": [
+    {
+      "box": [
+        58,
+        45,
+        117,
+        91
+      ],
+      "type": "Loose Joint (Faulty)",
+      "confidence": 0.724
+    },
+    {
+      "box": [
+        37,
+        64,
+        96,
+        73
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.654
+    },
+    {
+      "box": [
+        211,
+        36,
+        19,
+        33
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.759
+    },
+    {
+      "box": [
+        69,
+        53,
+        93,
+        23
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.704
+    },
+    {
+      "box": [
+        101,
+        117,
+        7,
+        8
+      ],
+      "type": "Tiny Faulty Spot",
+      "confidence": 0.613
+    }
+  ]
+}

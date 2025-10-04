@@ -64,7 +64,7 @@ spring.datasource.password=MyStrongPassword123!
 - **Real-time subscriptions**
 - **Row Level Security**
 
-## 🔧 Alternative Options
+## 🔧 Alternative Options (Our Approach)
 
 ### Option 2: Neon (Serverless PostgreSQL)
 
