@@ -1,0 +1,89 @@
+{
+  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_16_1759665349247/input/1759662227710_T4_faulty_002.png",
+  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_16_1759665349247/output/boxed/1759662227710_T4_faulty_002_boxed.png",
+  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_16_1759665349247/output/masks/1759662227710_T4_faulty_002_mask.png",
+  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_16_1759665349247/output/filtered/1759662227710_T4_faulty_002_filtered.png",
+  "label": "Loose Joint (Faulty)",
+  "boxes": [
+    {
+      "box": [
+        106,
+        72,
+        213,
+        145
+      ],
+      "type": "Loose Joint (Faulty)",
+      "confidence": 0.812
+    },
+    {
+      "box": [
+        78,
+        125,
+        196,
+        147
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.694
+    },
+    {
+      "box": [
+        385,
+        53,
+        32,
+        57
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.611
+    },
+    {
+      "box": [
+        251,
+        93,
+        45,
+        27
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.662
+    },
+    {
+      "box": [
+        65,
+        100,
+        46,
+        25
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.632
+    },
+    {
+      "box": [
+        85,
+        96,
+        108,
+        140
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.713
+    },
+    {
+      "box": [
+        234,
+        94,
+        36,
+        28
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.695
+    },
+    {
+      "box": [
+        246,
+        226,
+        24,
+        6
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.694
+    }
+  ]
+}

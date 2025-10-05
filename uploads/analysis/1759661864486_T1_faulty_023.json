@@ -1,0 +1,49 @@
+{
+  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_3_1759661998891/input/1759661864486_T1_faulty_023.jpg",
+  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_3_1759661998891/output/boxed/1759661864486_T1_faulty_023_boxed.jpg",
+  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_3_1759661998891/output/masks/1759661864486_T1_faulty_023_mask.png",
+  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/temp/anomaly-analysis/job_3_1759661998891/output/filtered/1759661864486_T1_faulty_023_filtered.png",
+  "label": "Unknown",
+  "boxes": [
+    {
+      "box": [
+        256,
+        296,
+        68,
+        42
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.6
+    },
+    {
+      "box": [
+        27,
+        202,
+        10,
+        53
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.741
+    },
+    {
+      "box": [
+        279,
+        291,
+        21,
+        7
+      ],
+      "type": "Tiny Faulty Spot",
+      "confidence": 0.532
+    },
+    {
+      "box": [
+        218,
+        458,
+        102,
+        74
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.68
+    }
+  ]
+}
