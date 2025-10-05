@@ -10,6 +10,7 @@ import com.example.transformer_manager_backkend.repository.TransformerRecordRepo
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import com.example.transformer_manager_backkend.repository.ImageRepository;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -24,16 +25,19 @@ public class InspectionService {
     private final InspectionRepository inspectionRepository;
     private final TransformerRecordRepository transformerRecordRepository;
     private final AnomalyAnalysisService anomalyAnalysisService;
+    private final ImageRepository imageRepository;
 
     @Value("${upload.directory}")
     private String uploadDirectory;
 
     public InspectionService(InspectionRepository inspectionRepository,
             TransformerRecordRepository transformerRecordRepository,
-            AnomalyAnalysisService anomalyAnalysisService) {
+            AnomalyAnalysisService anomalyAnalysisService,
+            ImageRepository imageRepository) {
         this.inspectionRepository = inspectionRepository;
         this.transformerRecordRepository = transformerRecordRepository;
         this.anomalyAnalysisService = anomalyAnalysisService;
+        this.imageRepository = imageRepository;
     }
 
     public Inspection createInspection(
@@ -232,4 +236,48 @@ public class InspectionService {
             }
         }
     }
+
+    public void deleteInspectionImage(Long imageId, User user) throws IOException {
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new RuntimeException("Image not found"));
+        
+        // Verify the user can delete this image
+        Inspection inspection = image.getInspection();
+        if (inspection == null) {
+            throw new RuntimeException("Image is not associated with any inspection");
+        }
+        
+        // Check if user owns this inspection (if conducted by user)
+        if (inspection.getConductedByUser() != null && 
+            !inspection.getConductedByUser().getId().equals(user.getId())) {
+            throw new RuntimeException("You can only delete images from your own inspections");
+        }
+        
+        // For admin-conducted inspections, only admins can delete
+        if (inspection.getConductedByAdmin() != null && user instanceof User) {
+            throw new RuntimeException("Only admins can delete images from admin-conducted inspections");
+        }
+        
+        deleteImageFile(image);
+        imageRepository.deleteById(imageId);
+    }
+
+    public void deleteInspectionImage(Long imageId, Admin admin) throws IOException {
+        Image image = imageRepository.findById(imageId)
+                .orElseThrow(() -> new RuntimeException("Image not found"));
+        
+        // Admins can delete any image
+        deleteImageFile(image);
+        imageRepository.deleteById(imageId);
+    }
+
+    private void deleteImageFile(Image image) throws IOException {
+        try {
+            Path filePath = Paths.get(uploadDirectory, image.getFilePath().replace("/uploads/", ""));
+            Files.deleteIfExists(filePath);
+        } catch (Exception e) {
+            // Log the error but don't throw to allow DB record deletion
+            System.err.println("Failed to delete image file: " + e.getMessage());
+        }
+    }    
 }

@@ -135,4 +135,28 @@ public class InspectionController {
 
         return ResponseEntity.ok().build();
     }
+
+    @DeleteMapping("/images/{imageId}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<?> deleteInspectionImage(
+            @PathVariable Long imageId,
+            Authentication authentication,
+            Principal principal) throws IOException {
+
+        // Determine if the user is an admin or regular user
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        if (isAdmin) {
+            Admin admin = adminRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new RuntimeException("Admin not found"));
+            inspectionService.deleteInspectionImage(imageId, admin);
+        } else {
+            User user = userRepository.findByUsername(principal.getName())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            inspectionService.deleteInspectionImage(imageId, user);
+        }
+
+        return ResponseEntity.ok().build();
+    }
 }
