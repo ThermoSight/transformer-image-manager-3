@@ -34,6 +34,7 @@ public class AnomalyAnalysisService {
 
     private final AnalysisJobRepository analysisJobRepository;
     private final ImageRepository imageRepository;
+    private final MLSettingsService mlSettingsService;
     private final ObjectMapper objectMapper;
     private final ExecutorService executorService;
 
@@ -46,9 +47,11 @@ public class AnomalyAnalysisService {
     @Value("${app.anomaly.temp.dir:./temp/anomaly-analysis}")
     private String tempDir;
 
-    public AnomalyAnalysisService(AnalysisJobRepository analysisJobRepository, ImageRepository imageRepository) {
+    public AnomalyAnalysisService(AnalysisJobRepository analysisJobRepository, ImageRepository imageRepository,
+            MLSettingsService mlSettingsService) {
         this.analysisJobRepository = analysisJobRepository;
         this.imageRepository = imageRepository;
+        this.mlSettingsService = mlSettingsService;
         this.objectMapper = new ObjectMapper();
         this.executorService = Executors.newSingleThreadExecutor();
 
@@ -160,7 +163,7 @@ public class AnomalyAnalysisService {
 
             // IMPORTANT: Update the image's file path to point to the boxed image
             job.getImage().setFilePath(result.getBoxedImagePath());
-            
+
             // Save the updated image to the database
             imageRepository.save(job.getImage());
 
@@ -253,14 +256,19 @@ public class AnomalyAnalysisService {
         String wslInputDir = projectRootWSL + "/" + relativeInputDir.toString().replace('\\', '/');
         String wslOutputDir = projectRootWSL + "/" + relativeOutputDir.toString().replace('\\', '/');
 
-        // Prepare WSL command
+        // Get current sensitivity setting
+        double sensitivity = mlSettingsService.getDetectionSensitivity();
+
+        // Prepare WSL command with sensitivity
         String wslCommand = String.format(
-                "wsl --cd \"/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference\" -- ./run_inference.sh --venv \"%s\" --input \"%s\" --outdir \"%s\"",
+                "wsl --cd \"/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference\" -- ./run_inference.sh --venv \"%s\" --input \"%s\" --outdir \"%s\" --sensitivity %.2f",
                 venvPath,
                 wslInputDir,
-                wslOutputDir);
+                wslOutputDir,
+                sensitivity);
 
         logger.info("Running WSL command: {}", wslCommand);
+        logger.info("Using detection sensitivity: {}", sensitivity);
         logger.info("Project root (Windows): {}", currentDir);
         logger.info("Project root (WSL): {}", projectRootWSL);
         logger.info("Input directory (Windows): {}", inputDir.toAbsolutePath());
@@ -372,7 +380,8 @@ public class AnomalyAnalysisService {
         Path targetJsonPath = analysisDir.resolve(jsonFileName);
         Files.copy(jsonFile, targetJsonPath, StandardCopyOption.REPLACE_EXISTING);
 
-        // Return the web-accessible path (without /uploads prefix since FileController adds it)
+        // Return the web-accessible path (without /uploads prefix since FileController
+        // adds it)
         String webBoxedPath = "/analysis/" + boxedFileName;
         String webJsonPath = "/analysis/" + jsonFileName;
 
