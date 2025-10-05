@@ -6,6 +6,7 @@
 #   ./run_inference.ps1 -Size 320
 #   ./run_inference.ps1 -VenvPath .venv
 #   ./run_inference.ps1 -Install
+#   ./run_inference.ps1 -Sensitivity 1.5
 
 param(
   [string]$Input = "test_image",
@@ -13,6 +14,7 @@ param(
   [string]$Config = "config/patchcore_transformers.yaml",
   [string]$Ckpt = "model_weights/model.ckpt",
   [int]$Size = 256,
+  [double]$Sensitivity = 1.0,
   [switch]$CPU,
   [string]$VenvPath = ".venv",
   [switch]$Install
@@ -53,11 +55,13 @@ $argsList = @(
   "--ckpt", $Ckpt,
   "--input", $Input,
   "--outdir", $OutDir,
-  "--size", $Size
+  "--size", $Size,
+  "--sensitivity", $Sensitivity
 )
 if ($CPU) { $argsList += "--cpu" }
 
 Write-Host "[INFO] Using interpreter: $venvPython"
+Write-Host "[INFO] Detection sensitivity: $Sensitivity"
 Write-Host "[INFO] Running: python $($argsList -join ' ')"
 
 # Run

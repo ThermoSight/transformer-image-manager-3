@@ -5,7 +5,7 @@
 #   wsl --cd "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference" -- ./run_inference.sh [args]
 #
 # Usage (inside WSL):
-#   ./run_inference.sh [--install] [--input <path>] [--outdir <dir>] [--config <yaml>] [--ckpt <ckpt>] [--size N] [--cpu] [--venv <path>]
+#   ./run_inference.sh [--install] [--input <path>] [--outdir <dir>] [--config <yaml>] [--ckpt <ckpt>] [--size N] [--cpu] [--venv <path>] [--sensitivity <float>]
 #   ENV: VENV=.venv (override virtualenv path; must already exist)
 
 set -euo pipefail
@@ -23,6 +23,7 @@ OUTDIR="outputs"
 CONFIG="config/patchcore_transformers.yaml"
 CKPT="model_weights/model.ckpt"
 SIZE=256
+SENSITIVITY=1.0
 CPU=""
 INSTALL=0
 CLI_VENV=""
@@ -35,6 +36,7 @@ while [[ $# -gt 0 ]]; do
     --config) CONFIG="$2"; shift 2;;
     --ckpt) CKPT="$2"; shift 2;;
     --size) SIZE="$2"; shift 2;;
+    --sensitivity) SENSITIVITY="$2"; shift 2;;
     --cpu) CPU="--cpu"; shift;;
     --install) INSTALL=1; shift;;
     --venv) CLI_VENV="$2"; shift 2;;
@@ -77,6 +79,7 @@ fi
 
 echo "[INFO] Using venv: $VENV_PATH"
 echo "[INFO] Python: $(python --version)"
+echo "[INFO] Detection sensitivity: $SENSITIVITY"
 echo "[INFO] Running inference_core_local.py"
 python inference_core_local.py \
   --config "$CONFIG" \
@@ -84,6 +87,7 @@ python inference_core_local.py \
   --input  "$INPUT" \
   --outdir "$OUTDIR" \
   --size   "$SIZE" \
+  --sensitivity "$SENSITIVITY" \
   $CPU
 
 echo "[DONE] Inference completed. Check '$OUTDIR' for results."

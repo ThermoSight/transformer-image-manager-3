@@ -188,7 +188,16 @@ def _calculate_confidence(img, box, mask, label):
 # -------------------------
 # Classification (on FILTERED image)
 # -------------------------
-def classify_filtered_image(filtered_img_path: str):
+def classify_filtered_image(filtered_img_path: str, sensitivity=1.0):
+    """
+    Classify filtered image with adjustable sensitivity.
+    
+    Args:
+        filtered_img_path: Path to the filtered image
+        sensitivity: Detection sensitivity (0.1-2.0)
+                    - Higher values (>1.0) = more sensitive = more boxes
+                    - Lower values (<1.0) = less sensitive = fewer boxes
+    """
     img = cv2.imread(filtered_img_path)
     if img is None:
         raise FileNotFoundError(f"Could not read filtered image: {filtered_img_path}")
@@ -221,7 +230,7 @@ def classify_filtered_image(filtered_img_path: str):
     elif (yellow_count) / total > 0.5:
         label = "Full Wire Overload"
 
-    full_wire_thresh = 0.7
+    full_wire_thresh = max(0.5, 0.7 / sensitivity)  # Prevent threshold from going too low
     if (red_count + orange_count + yellow_count) / total > full_wire_thresh:
         label = "Full Wire Overload"
         box = (0, 0, img.shape[1], img.shape[0])
@@ -229,9 +238,10 @@ def classify_filtered_image(filtered_img_path: str):
         conf = min(0.95, 0.7 + ((red_count + orange_count + yellow_count) / total - full_wire_thresh) * 0.8)
         label_list.append(label); confidence_list.append(round(conf, 3))
     else:
-        min_area_faulty = 120
-        min_area_potential = 1000
-        max_area = 0.05 * total
+        # Scale area thresholds by sensitivity (inverse relationship)
+        min_area_faulty = max(10, int(120 / sensitivity))
+        min_area_potential = max(50, int(1000 / sensitivity))
+        max_area = min(0.2 * total, 0.05 * total * sensitivity)  # Allow larger areas with higher sensitivity
 
         for mask, spot_label, min_a in [
             (red_mask, "Point Overload (Faulty)", min_area_faulty),
@@ -257,14 +267,16 @@ def classify_filtered_image(filtered_img_path: str):
         center_red2 = cv2.inRange(center_hsv, (160, 100, 100), (180, 255, 255))
         center_red = cv2.bitwise_or(center_red1, center_red2)
 
-        if np.sum(center_red > 0) + np.sum(center_orange > 0) > 0.1 * center.size:
+        # Scale center area threshold by sensitivity
+        center_thresh = max(0.05, 0.1 / sensitivity) * center.size
+        if np.sum(center_red > 0) + np.sum(center_orange > 0) > center_thresh:
             label = "Loose Joint (Faulty)"
             box = (w // 4, h // 4, w // 2, h // 2)
             box_list.append(box)
             label_list.append(label)
             center_coverage = (np.sum(center_red > 0) + np.sum(center_orange > 0)) / center.size
             confidence_list.append(round(min(0.85, 0.6 + center_coverage), 3))
-        elif np.sum(center_yellow > 0) > 0.1 * center.size:
+        elif np.sum(center_yellow > 0) > center_thresh:
             label = "Loose Joint (Potential)"
             box = (w // 4, h // 4, w // 2, h // 2)
             box_list.append(box)
@@ -272,8 +284,9 @@ def classify_filtered_image(filtered_img_path: str):
             center_coverage = np.sum(center_yellow > 0) / center.size
             confidence_list.append(round(min(0.75, 0.5 + center_coverage), 3))
 
-    # Tiny spots
-    min_area_tiny, max_area_tiny = 10, 30
+    # Tiny spots - scale thresholds by sensitivity
+    min_area_tiny = max(5, int(10 / sensitivity))
+    max_area_tiny = min(100, int(30 * sensitivity))
     for mask, spot_label in [
         (red_mask, "Tiny Faulty Spot"),
         (yellow_mask, "Tiny Potential Spot"),
@@ -288,9 +301,9 @@ def classify_filtered_image(filtered_img_path: str):
                 label_list.append(spot_label)
                 confidence_list.append(_calculate_confidence(img, box, mask, spot_label))
 
-    # Wire-like strips
-    aspect_ratio_thresh = 5
-    min_strip_area = 0.01 * total
+    # Wire-like strips - scale thresholds by sensitivity
+    aspect_ratio_thresh = max(3, 5 / sensitivity)  # Lower aspect ratio = more sensitive
+    min_strip_area = max(0.005 * total, 0.01 * total / sensitivity)
     wire_boxes, wire_labels, wire_confidences = [], [], []
     for mask, strip_label in [
         (red_mask, "Wire Overload (Red Strip)"),
@@ -313,10 +326,14 @@ def classify_filtered_image(filtered_img_path: str):
     label_list = wire_labels[:] + label_list
     confidence_list = wire_confidences[:] + confidence_list
 
-    box_list, label_list, confidence_list = _nms_iou_with_confidence(box_list, label_list, confidence_list, iou_thresh=0.4)
+    # Post-processing with sensitivity-adjusted parameters
+    iou_thresh = max(0.2, min(0.6, 0.4 + (sensitivity - 1.0) * 0.1))  # Higher sensitivity = less aggressive NMS
+    merge_dist = max(20, min(200, int(100 / sensitivity)))  # Higher sensitivity = merge closer boxes
+    
+    box_list, label_list, confidence_list = _nms_iou_with_confidence(box_list, label_list, confidence_list, iou_thresh=iou_thresh)
     box_list, label_list, confidence_list = _filter_faulty_inside_potential(box_list, label_list, confidence_list)
     box_list, label_list, confidence_list = _filter_faulty_overlapping_potential(box_list, label_list, confidence_list)
-    box_list, label_list, confidence_list = _merge_close_boxes(box_list, label_list, dist_thresh=100, confidences=confidence_list)
+    box_list, label_list, confidence_list = _merge_close_boxes(box_list, label_list, dist_thresh=merge_dist, confidences=confidence_list)
 
     return label, box_list, label_list, confidence_list
 
@@ -397,7 +414,7 @@ def color_for_label(label):
         return (0, 0, 255)    # red box
 
 def run_pipeline_for_image(model, device, image_path, out_boxed_dir, out_mask_dir, out_filtered_dir,
-                           infer_size=DEFAULT_INFER_SIZE):
+                           infer_size=DEFAULT_INFER_SIZE, sensitivity=1.0):
     pc_out = infer_single_image_with_patchcore(
         model, device, image_path, infer_size=infer_size,
         out_mask_dir=out_mask_dir, out_filtered_dir=out_filtered_dir
@@ -405,8 +422,8 @@ def run_pipeline_for_image(model, device, image_path, out_boxed_dir, out_mask_di
     filtered_path = pc_out["filtered_path"] or pc_out["orig_path"]
     orig_path = pc_out["orig_path"]
 
-    # Classify
-    label, boxes, labels, confidences = classify_filtered_image(filtered_path)
+    # Classify with sensitivity parameter
+    label, boxes, labels, confidences = classify_filtered_image(filtered_path, sensitivity=sensitivity)
 
     # Draw on original
     draw_img = cv2.imread(orig_path)
@@ -461,11 +478,18 @@ def main():
     parser.add_argument("--input",  default=DEFAULT_INPUT,  help="Image file or folder")
     parser.add_argument("--outdir", default=DEFAULT_OUTDIR, help="Output base directory")
     parser.add_argument("--size",   type=int, default=DEFAULT_INFER_SIZE, help="Inference resize (match training)")
+    parser.add_argument("--sensitivity", type=float, default=1.0, help="Detection sensitivity (0.1-2.0). Higher = more boxes")
     parser.add_argument("--cpu",    action="store_true", help="Force CPU")
     args = parser.parse_args()
 
+    # Validate sensitivity range
+    if not 0.1 <= args.sensitivity <= 2.0:
+        print(f"[WARN] Sensitivity {args.sensitivity} outside recommended range [0.1, 2.0]. Clamping.")
+        args.sensitivity = max(0.1, min(2.0, args.sensitivity))
+
     device = torch.device("cpu" if args.cpu or not torch.cuda.is_available() else "cuda")
     print(f"[INFO] Using device: {device}")
+    print(f"[INFO] Detection sensitivity: {args.sensitivity}")
 
     model, _cfg = load_model(args.config, args.ckpt, device)
     print("[INFO] Model loaded.")
@@ -488,6 +512,7 @@ def main():
             out_mask_dir=out_mask_dir,
             out_filtered_dir=out_filtered_dir,
             infer_size=args.size,
+            sensitivity=args.sensitivity,
         )
         print(f"  -> Label: {result['label']}")
         print(f"  -> Boxed: {result['boxed_path']}")
