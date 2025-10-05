@@ -21,6 +21,8 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../AuthContext";
 import { useNavigate, useParams } from "react-router-dom";
+import MLSensitivityIndicator from "./MLSensitivityIndicator";
+import SensitivityIndicator from "./SensitivityIndicator";
 
 const InspectionUpload = ({ onUpload }) => {
   const { transformerId } = useParams();
@@ -236,17 +238,43 @@ const InspectionUpload = ({ onUpload }) => {
                     <Dropdown.Toggle
                       variant="outline-primary"
                       id="dropdown-transformer"
-                      className="w-100"
+                      className="w-100 text-start"
+                      style={{
+                        textOverflow: "ellipsis",
+                        overflow: "hidden",
+                        whiteSpace: "nowrap",
+                        minHeight: "38px",
+                      }}
                     >
                       {selectedTransformer ? (
-                        <>
-                          <FontAwesomeIcon icon={faSearch} className="me-2" />
-                          {selectedTransformer.name}
-                          {selectedTransformer.locationName &&
-                            ` - ${selectedTransformer.locationName}`}
-                          {selectedTransformer.poleNo &&
-                            ` (Pole #${selectedTransformer.poleNo})`}
-                        </>
+                        <div className="d-flex align-items-center">
+                          <FontAwesomeIcon
+                            icon={faSearch}
+                            className="me-2 flex-shrink-0"
+                          />
+                          <span
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                            title={`${selectedTransformer.name}${
+                              selectedTransformer.locationName
+                                ? ` - ${selectedTransformer.locationName}`
+                                : ""
+                            }${
+                              selectedTransformer.poleNo
+                                ? ` (Pole #${selectedTransformer.poleNo})`
+                                : ""
+                            }`}
+                          >
+                            {selectedTransformer.name}
+                            {selectedTransformer.locationName &&
+                              ` - ${selectedTransformer.locationName}`}
+                            {selectedTransformer.poleNo &&
+                              ` (Pole #${selectedTransformer.poleNo})`}
+                          </span>
+                        </div>
                       ) : (
                         <>
                           <FontAwesomeIcon icon={faSearch} className="me-2" />
@@ -256,17 +284,25 @@ const InspectionUpload = ({ onUpload }) => {
                     </Dropdown.Toggle>
 
                     <Dropdown.Menu
-                      style={{ maxHeight: "300px", overflowY: "auto" }}
+                      style={{
+                        maxHeight: "300px",
+                        overflowY: "auto",
+                        width: "100%",
+                        minWidth: "400px",
+                      }}
                     >
                       {transformers.map((transformer) => (
                         <Dropdown.Item
                           key={transformer.id}
                           onClick={() => handleTransformerSelect(transformer)}
+                          className="py-2"
                         >
-                          <div>
-                            <strong>{transformer.name}</strong>
+                          <div style={{ maxWidth: "380px" }}>
+                            <strong className="d-block text-truncate">
+                              {transformer.name}
+                            </strong>
                             {transformer.locationName && (
-                              <div className="text-muted small">
+                              <div className="text-muted small text-truncate">
                                 📍 {transformer.locationName}
                               </div>
                             )}
@@ -325,6 +361,10 @@ const InspectionUpload = ({ onUpload }) => {
             </Row>
 
             <h4 className="mb-3">Maintenance Images</h4>
+
+            {/* ML Sensitivity Indicator */}
+            <MLSensitivityIndicator />
+
             {formData.images.length === 0 && (
               <Alert variant="info">
                 No images added yet. Click "Add Image" below to upload

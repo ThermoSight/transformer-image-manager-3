@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Navbar,
   Nav,
@@ -16,12 +16,15 @@ import {
   faUpload,
   faBolt,
   faClipboardCheck,
+  faCog,
 } from "@fortawesome/free-solid-svg-icons";
 import QueueStatus from "./QueueStatus";
+import SettingsModal from "./SettingsModal";
 
 const MoodleNavbar = () => {
   const { user, logout, isAuthenticated, isAdmin, role } = useAuth();
   const navigate = useNavigate();
+  const [showSettings, setShowSettings] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -98,6 +101,11 @@ const MoodleNavbar = () => {
                       {user.username} ({role})
                     </Dropdown.Item>
                     <Dropdown.Divider />
+                    <Dropdown.Item onClick={() => setShowSettings(true)}>
+                      <FontAwesomeIcon icon={faCog} className="me-2" />
+                      ML Settings
+                    </Dropdown.Item>
+                    <Dropdown.Divider />
                     <Dropdown.Item onClick={handleLogout}>
                       <FontAwesomeIcon icon={faSignOutAlt} className="me-2" />
                       Logout
@@ -109,6 +117,12 @@ const MoodleNavbar = () => {
           </div>
         </Navbar.Collapse>
       </Container>
+
+      {/* Settings Modal */}
+      <SettingsModal
+        show={showSettings}
+        onHide={() => setShowSettings(false)}
+      />
     </Navbar>
   );
 };

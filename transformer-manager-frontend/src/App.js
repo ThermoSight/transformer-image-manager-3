@@ -9,6 +9,7 @@ import {
 import { Container } from "react-bootstrap";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { AuthProvider } from "./AuthContext";
+import { SettingsProvider } from "./SettingsContext";
 import Login from "./Login";
 import TransformerRecordUpload from "./components/TransformerRecordUpload";
 import TransformerList from "./components/TransformerList";
@@ -70,80 +71,82 @@ function App() {
 
   return (
     <AuthProvider>
-      <Router>
-        <TitleHandler />
-        <MoodleNavbar />
-        <Container fluid className="main-container">
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <TransformerList key={refresh} />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/inspections"
-              element={
-                <ProtectedRoute>
-                  <InspectionList key={refresh} />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/upload"
-              element={
-                <ProtectedRoute adminOnly>
-                  <TransformerRecordUpload onUpload={handleUpload} />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/upload-inspection"
-              element={
-                <ProtectedRoute>
-                  <InspectionUpload onUpload={handleUpload} />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/records/:id"
-              element={
-                <ProtectedRoute>
-                  <TransformerRecordDetail />
-                </ProtectedRoute>
-              }
-            />
-            {/* New inspection routes */}
-            <Route
-              path="/inspections/list/:transformerId"
-              element={
-                <ProtectedRoute>
-                  <InspectionList />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/inspections/:id"
-              element={
-                <ProtectedRoute>
-                  <InspectionDetail />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/inspections/add/:transformerId"
-              element={
-                <ProtectedRoute>
-                  <InspectionUpload />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
-        </Container>
-      </Router>
+      <SettingsProvider>
+        <Router>
+          <TitleHandler />
+          <MoodleNavbar />
+          <Container fluid className="main-container">
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <TransformerList key={refresh} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inspections"
+                element={
+                  <ProtectedRoute>
+                    <InspectionList key={refresh} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/upload"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <TransformerRecordUpload onUpload={handleUpload} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/upload-inspection"
+                element={
+                  <ProtectedRoute>
+                    <InspectionUpload onUpload={handleUpload} />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/records/:id"
+                element={
+                  <ProtectedRoute>
+                    <TransformerRecordDetail />
+                  </ProtectedRoute>
+                }
+              />
+              {/* New inspection routes */}
+              <Route
+                path="/inspections/list/:transformerId"
+                element={
+                  <ProtectedRoute>
+                    <InspectionList />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inspections/:id"
+                element={
+                  <ProtectedRoute>
+                    <InspectionDetail />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/inspections/add/:transformerId"
+                element={
+                  <ProtectedRoute>
+                    <InspectionUpload />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
+          </Container>
+        </Router>
+      </SettingsProvider>
     </AuthProvider>
   );
 }
