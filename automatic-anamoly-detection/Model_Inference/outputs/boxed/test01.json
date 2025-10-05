@@ -3,37 +3,17 @@
   "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference/outputs/boxed/test01_boxed.jpg",
   "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference/outputs/masks/test01_mask.png",
   "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference/outputs/filtered/test01_filtered.png",
-  "label": "Loose Joint (Faulty)",
+  "label": "Full Wire Overload",
   "boxes": [
     {
       "box": [
-        160,
-        160,
-        320,
-        320
+        0,
+        0,
+        640,
+        640
       ],
-      "type": "Loose Joint (Faulty)",
-      "confidence": 0.733
-    },
-    {
-      "box": [
-        384,
-        411,
-        94,
-        102
-      ],
-      "type": "Point Overload (Faulty)",
-      "confidence": 0.725
-    },
-    {
-      "box": [
-        279,
-        526,
-        36,
-        66
-      ],
-      "type": "Point Overload (Faulty)",
-      "confidence": 0.74
+      "type": "Full Wire Overload",
+      "confidence": 0.709
     },
     {
       "box": [
@@ -68,9 +48,9 @@
     {
       "box": [
         543,
-        323,
-        3,
-        9
+        307,
+        20,
+        25
       ],
       "type": "Tiny Potential Spot",
       "confidence": 0.677

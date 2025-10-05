@@ -17,6 +17,16 @@
     },
     {
       "box": [
+        376,
+        189,
+        257,
+        235
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.644
+    },
+    {
+      "box": [
         128,
         177,
         128,
@@ -39,11 +49,31 @@
       "box": [
         282,
         224,
-        83,
-        128
+        38,
+        127
+      ],
+      "type": "Wire Overload (Red Strip)",
+      "confidence": 0.698
+    },
+    {
+      "box": [
+        328,
+        267,
+        37,
+        85
       ],
       "type": "Point Overload (Faulty)",
-      "confidence": 0.658
+      "confidence": 0.655
+    },
+    {
+      "box": [
+        480,
+        215,
+        16,
+        7
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.571
     }
   ]
 }
