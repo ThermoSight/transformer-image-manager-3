@@ -1,8 +1,8 @@
 {
-  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference/test_image/test02.jpg",
-  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference/outputs/boxed/test02_boxed.jpg",
-  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference/outputs/masks/test02_mask.png",
-  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference/outputs/filtered/test02_filtered.png",
+  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference/test_image/test02.jpg",
+  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference/outputs/boxed/test02_boxed.jpg",
+  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference/outputs/masks/test02_mask.png",
+  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference/outputs/filtered/test02_filtered.png",
   "label": "Loose Joint (Faulty)",
   "boxes": [
     {
@@ -14,16 +14,6 @@
       ],
       "type": "Loose Joint (Faulty)",
       "confidence": 0.773
-    },
-    {
-      "box": [
-        376,
-        189,
-        257,
-        235
-      ],
-      "type": "Point Overload (Faulty)",
-      "confidence": 0.644
     },
     {
       "box": [
@@ -49,31 +39,11 @@
       "box": [
         282,
         224,
-        38,
-        127
-      ],
-      "type": "Wire Overload (Red Strip)",
-      "confidence": 0.698
-    },
-    {
-      "box": [
-        328,
-        267,
-        37,
-        85
+        83,
+        128
       ],
       "type": "Point Overload (Faulty)",
-      "confidence": 0.655
-    },
-    {
-      "box": [
-        480,
-        215,
-        16,
-        7
-      ],
-      "type": "Tiny Potential Spot",
-      "confidence": 0.571
+      "confidence": 0.658
     }
   ]
 }

@@ -38,10 +38,10 @@ public class AnomalyAnalysisService {
     private final ObjectMapper objectMapper;
     private final ExecutorService executorService;
 
-    @Value("${app.anomaly.model.path:C:/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference}")
+    @Value("${app.anomaly.model.path:C:/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference}")
     private String modelPath;
 
-    @Value("${app.anomaly.venv.path:/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/.venv}")
+    @Value("${app.anomaly.venv.path:/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/.venv}")
     private String venvPath;
 
     @Value("${app.anomaly.temp.dir:./temp/anomaly-analysis}")
@@ -261,7 +261,7 @@ public class AnomalyAnalysisService {
 
         // Prepare WSL command with sensitivity
         String wslCommand = String.format(
-                "wsl --cd \"/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference\" -- ./run_inference.sh --venv \"%s\" --input \"%s\" --outdir \"%s\" --sensitivity %.2f",
+                "wsl --cd \"/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference\" -- ./run_inference.sh --venv \"%s\" --input \"%s\" --outdir \"%s\" --sensitivity %.2f",
                 venvPath,
                 wslInputDir,
                 wslOutputDir,
