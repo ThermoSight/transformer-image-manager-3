@@ -25,8 +25,11 @@ import {
   faFileCode,
   faImage,
   faRefresh,
+  faEdit,
+  faDrawPolygon,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "../AuthContext";
+import InteractiveAnnotationEditor from "./InteractiveAnnotationEditor";
 
 const AnalysisDisplay = ({ inspectionId, images }) => {
   const [analysisJobs, setAnalysisJobs] = useState([]);
@@ -36,6 +39,12 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
+
+  // Annotation editor state
+  const [showAnnotationEditor, setShowAnnotationEditor] = useState(false);
+  const [selectedJobForAnnotation, setSelectedJobForAnnotation] =
+    useState(null);
+
   const { token, isAuthenticated } = useAuth();
 
   useEffect(() => {
@@ -150,6 +159,18 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
 
   const getImageJob = (imageId) => {
     return analysisJobs.find((job) => job.image.id === imageId);
+  };
+
+  const openAnnotationEditor = (job) => {
+    setSelectedJobForAnnotation(job);
+    setShowAnnotationEditor(true);
+  };
+
+  const closeAnnotationEditor = () => {
+    setShowAnnotationEditor(false);
+    setSelectedJobForAnnotation(null);
+    // Refresh analysis jobs to show any updates
+    fetchAnalysisJobs();
   };
 
   const maintenanceImages =
@@ -285,22 +306,38 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
                         {job &&
                           job.status === "COMPLETED" &&
                           job.boxedImagePath && (
-                            <Button
-                              variant="success"
-                              size="sm"
-                              onClick={() =>
-                                window.open(
-                                  `http://localhost:8080/api/files${job.boxedImagePath}`,
-                                  "_blank"
-                                )
-                              }
-                            >
-                              <FontAwesomeIcon
-                                icon={faImage}
-                                className="me-1"
-                              />
-                              View Result
-                            </Button>
+                            <>
+                              <Button
+                                variant="success"
+                                size="sm"
+                                onClick={() =>
+                                  window.open(
+                                    `http://localhost:8080/api/files${job.boxedImagePath}`,
+                                    "_blank"
+                                  )
+                                }
+                              >
+                                <FontAwesomeIcon
+                                  icon={faImage}
+                                  className="me-1"
+                                />
+                                View Result
+                              </Button>
+
+                              <Button
+                                variant="warning"
+                                size="sm"
+                                onClick={() => openAnnotationEditor(job)}
+                                title="Edit annotations interactively"
+                                className="ms-1"
+                              >
+                                <FontAwesomeIcon
+                                  icon={faEdit}
+                                  className="me-1"
+                                />
+                                Edit Annotations
+                              </Button>
+                            </>
                           )}
 
                         {job &&
@@ -403,6 +440,15 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
           <Toast.Body>{toastMessage}</Toast.Body>
         </Toast>
       </ToastContainer>
+
+      {/* Interactive Annotation Editor */}
+      <InteractiveAnnotationEditor
+        show={showAnnotationEditor}
+        onHide={closeAnnotationEditor}
+        analysisJobId={selectedJobForAnnotation?.id}
+        boxedImagePath={selectedJobForAnnotation?.boxedImagePath}
+        originalResultJson={selectedJobForAnnotation?.resultJson}
+      />
     </>
   );
 };
