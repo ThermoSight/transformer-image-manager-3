@@ -92,6 +92,21 @@ public class AnnotationService {
     }
 
     /**
+     * Get annotation by its ID (ensures boxes are initialized for serialization)
+     */
+    @Transactional(readOnly = true)
+    public Optional<Annotation> getAnnotationById(Long annotationId) {
+        Optional<Annotation> opt = annotationRepository.findById(annotationId);
+        opt.ifPresent(a -> {
+            // touch boxes to initialize lazy collection
+            if (a.getAnnotationBoxes() != null) {
+                a.getAnnotationBoxes().size();
+            }
+        });
+        return opt;
+    }
+
+    /**
      * Update annotation with new box data
      */
     @Transactional
@@ -104,35 +119,41 @@ public class AnnotationService {
 
         Annotation annotation = annotationOpt.get();
 
-        // Verify user permissions (basic check - you might want to enhance this)
-        if (annotator instanceof User && annotation.getAnnotatedByUser() != null &&
-                !annotation.getAnnotatedByUser().getId().equals(((User) annotator).getId())) {
-            throw new RuntimeException("User can only edit their own annotations");
-        }
+        // Allow any user to edit for now (open access per request)
 
         // Update comments
-        annotation.setComments(comments);
+        annotation.setComments(comments != null ? comments : "");
         annotation.setAnnotationType(Annotation.AnnotationType.EDITED);
 
-        // Clear existing boxes
-        annotationBoxRepository.deleteByAnnotation(annotation);
+        // Clear existing boxes by modifying the managed collection
+        List<AnnotationBox> managedBoxes = annotation.getAnnotationBoxes();
+        if (managedBoxes != null && !managedBoxes.isEmpty()) {
+            for (AnnotationBox b : new ArrayList<>(managedBoxes)) {
+                b.setAnnotation(null);
+            }
+            managedBoxes.clear();
+        }
 
-        // Create new boxes from DTOs
-        List<AnnotationBox> newBoxes = new ArrayList<>();
+        // Create new boxes from DTOs and add to managed collection
+        if (boxDTOs == null) {
+            boxDTOs = new ArrayList<>();
+        }
         for (AnnotationBoxDTO dto : boxDTOs) {
-            AnnotationBox box = new AnnotationBox(dto.getX(), dto.getY(), dto.getWidth(), dto.getHeight(),
-                    dto.getType(), dto.getConfidence());
+            int x = dto.getX() != null ? dto.getX() : 0;
+            int y = dto.getY() != null ? dto.getY() : 0;
+            int w = dto.getWidth() != null ? Math.max(1, dto.getWidth()) : 1;
+            int h = dto.getHeight() != null ? Math.max(1, dto.getHeight()) : 1;
+            String type = (dto.getType() != null && !dto.getType().isBlank()) ? dto.getType() : "Custom Anomaly";
+
+            AnnotationBox box = new AnnotationBox(x, y, w, h, type, dto.getConfidence());
             box.setAnnotation(annotation);
             box.setAction(dto.getAction() != null ? dto.getAction() : AnnotationBox.BoxAction.UNCHANGED);
             box.setComments(dto.getComments());
-            newBoxes.add(box);
+            managedBoxes.add(box);
         }
 
-        annotationBoxRepository.saveAll(newBoxes);
-        annotation.setAnnotationBoxes(newBoxes);
-
-        // Update modified JSON
-        String modifiedJson = createModifiedJson(annotation, newBoxes);
+        // Update modified JSON based on current managed boxes
+        String modifiedJson = createModifiedJson(annotation, managedBoxes);
         annotation.setModifiedResultJson(modifiedJson);
 
         annotation = annotationRepository.save(annotation);
@@ -145,7 +166,7 @@ public class AnnotationService {
             // Don't throw exception here to avoid transaction rollback
         }
 
-        logger.info("Updated annotation {} with {} boxes", annotationId, newBoxes.size());
+        logger.info("Updated annotation {} with {} boxes", annotationId, managedBoxes.size());
         return annotation;
     }
 

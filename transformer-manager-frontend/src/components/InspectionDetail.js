@@ -109,13 +109,13 @@ const InspectionDetail = () => {
 
   // Debug: Log auth and inspection data
   useEffect(() => {
-    console.log("=== DEBUG INFORMATION ===");
-    console.log("Auth User:", authUser);
-    console.log("Inspection:", inspection);
-    console.log("Can delete images:", canDeleteImages());
-    console.log("Is authenticated:", isAuthenticated);
-    console.log("Maintenance images count:", inspection?.images?.length || 0);
-    console.log("=== END DEBUG ===");
+    // console.log("=== DEBUG INFORMATION ===");
+    // console.log("Auth User:", authUser);
+    // console.log("Inspection:", inspection);
+    // console.log("Can delete images:", canDeleteImages());
+    // console.log("Is authenticated:", isAuthenticated);
+    // console.log("Maintenance images count:", inspection?.images?.length || 0);
+    // console.log("=== END DEBUG ===");
   }, [authUser, inspection, isAuthenticated]);
 
   // Get ALL images from transformer record (same as TransformerRecordDetail)
@@ -126,29 +126,29 @@ const InspectionDetail = () => {
 
   // Check if current user can delete images from this inspection
   const canDeleteImages = () => {
-    console.log("=== Checking delete permissions ===");
-    console.log("Inspection:", inspection);
-    console.log("Auth User:", authUser);
+    // console.log("=== Checking delete permissions ===");
+    // console.log("Inspection:", inspection);
+    // console.log("Auth User:", authUser);
 
     if (!inspection) {
-      console.log("Cannot delete: No inspection data");
+      // console.log("Cannot delete: No inspection data");
       return false;
     }
 
     if (!authUser) {
-      console.log("Cannot delete: No auth user data");
+      // console.log("Cannot delete: No auth user data");
       return false;
     }
 
     if (!isAuthenticated) {
-      console.log("Cannot delete: Not authenticated");
+      // console.log("Cannot delete: Not authenticated");
       return false;
     }
 
     // If user is ADMIN, always allow delete
     const isAdmin = authUser.role === "ADMIN" || authUser.role === "ROLE_ADMIN";
     if (isAdmin) {
-      console.log("User is ADMIN - can delete");
+      // console.log("User is ADMIN - can delete");
       return true;
     }
 
@@ -158,20 +158,20 @@ const InspectionDetail = () => {
       inspection.conductedByUser.id === authUser.id;
 
     if (userConductedInspection) {
-      console.log("User conducted this inspection - can delete");
+      // console.log("User conducted this inspection - can delete");
       return true;
     }
 
     // Additional check for conductedBy field (backward compatibility)
     if (inspection.conductedBy && inspection.conductedBy.id === authUser.id) {
-      console.log("User conducted this inspection (legacy field) - can delete");
+      // console.log("User conducted this inspection (legacy field) - can delete");
       return true;
     }
 
-    console.log("Cannot delete - no permission match");
-    console.log("Conducted by user:", inspection.conductedByUser);
-    console.log("Auth user ID:", authUser.id);
-    console.log("=== End permission check ===");
+    // console.log("Cannot delete - no permission match");
+    // console.log("Conducted by user:", inspection.conductedByUser);
+    // console.log("Auth user ID:", authUser.id);
+    // console.log("=== End permission check ===");
 
     return false;
   };
@@ -179,7 +179,7 @@ const InspectionDetail = () => {
   // SIMPLE VERSION FOR TESTING - REMOVE THIS IN PRODUCTION
   const canDeleteImagesSimple = () => {
     // For testing, allow all authenticated users to delete
-    console.log("TEST MODE: Allowing delete for all authenticated users");
+    // console.log("TEST MODE: Allowing delete for all authenticated users");
     return isAuthenticated;
   };
 

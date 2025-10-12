@@ -16,7 +16,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/annotations")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 public class AnnotationController {
 
     private final AnnotationService annotationService;
@@ -52,21 +52,46 @@ public class AnnotationController {
      */
     @PutMapping("/{annotationId}")
     @PermitAll
-    public ResponseEntity<Annotation> updateAnnotation(
+    public ResponseEntity<?> updateAnnotation(
             @PathVariable Long annotationId,
             @RequestBody UpdateAnnotationRequest request,
             Authentication authentication,
             Principal principal) {
 
-        Object annotator = getAnnotator(authentication, principal);
+        try {
+            Object annotator = getAnnotator(authentication, principal);
 
-        Annotation updatedAnnotation = annotationService.updateAnnotation(
-                annotationId,
-                request.getBoxes(),
-                request.getComments(),
-                annotator);
+            annotationService.updateAnnotation(
+                    annotationId,
+                    request != null ? request.getBoxes() : null,
+                    request != null ? request.getComments() : null,
+                    annotator);
 
-        return ResponseEntity.ok(updatedAnnotation);
+            return ResponseEntity.ok(java.util.Map.of("status", "ok"));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(
+                    java.util.Map.of(
+                            "message", "Failed to update annotation",
+                            "error", e.getMessage()));
+        }
+    }
+
+    /**
+     * Get annotation by ID
+     */
+    @GetMapping("/{annotationId}")
+    @PermitAll
+    public ResponseEntity<?> getAnnotationById(@PathVariable Long annotationId) {
+        try {
+            Optional<Annotation> annotation = annotationService.getAnnotationById(annotationId);
+            return annotation.<ResponseEntity<?>>map(ResponseEntity::ok)
+                    .orElseGet(() -> ResponseEntity.notFound().build());
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(
+                    java.util.Map.of(
+                            "message", "Failed to fetch annotation",
+                            "error", e.getMessage()));
+        }
     }
 
     /**

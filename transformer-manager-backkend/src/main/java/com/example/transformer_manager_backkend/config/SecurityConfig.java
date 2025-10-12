@@ -43,30 +43,9 @@ public class SecurityConfig {
                         .accessDeniedHandler(new RestAccessDeniedHandler())
                         .authenticationEntryPoint(new RestAuthenticationEntryPoint()))
                 .authorizeHttpRequests(auth -> auth
-                        // Allow CORS preflight requests
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/test/**").permitAll()
-                        .requestMatchers("/uploads/**").permitAll()
-                        .requestMatchers("/analysis/**").permitAll()
-                        .requestMatchers("/api/files/uploads/**").permitAll()
-                        .requestMatchers("/api/files/analysis/**").permitAll()
-                        .requestMatchers("/api/files/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
-                        .requestMatchers("/api/analysis/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
-                        // Allow everyone to access annotations endpoints (GET/PUT)
-                        .requestMatchers("/api/annotations/**").permitAll()
-                        // Only ADMIN can create, update, delete transformer records
-                        .requestMatchers(HttpMethod.POST, "/api/transformer-records").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/transformer-records/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/transformer-records/**").hasRole("ADMIN")
-                        // Anyone authenticated can list or view transformer records
-                        .requestMatchers(HttpMethod.GET, "/api/transformer-records")
-                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
-                        .requestMatchers(HttpMethod.GET, "/api/transformer-records/**")
-                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
-                        // Both ADMIN and USER can manage inspections
-                        .requestMatchers("/api/inspections/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
-                        .anyRequest().authenticated())
+                        .requestMatchers("/**").permitAll()
+                        .anyRequest().permitAll())
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
@@ -75,9 +54,11 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:3000"));
+        // Allow all origins and headers (including 127.0.0.1 and alternate ports)
+        configuration.setAllowedOriginPatterns(List.of("*"));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
