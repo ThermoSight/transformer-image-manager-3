@@ -16,11 +16,13 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 
 import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtUtil jwtUtil;
@@ -37,24 +39,33 @@ public class SecurityConfig {
                 .authenticationProvider(authenticationProvider())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf.disable())
+                .exceptionHandling(e -> e
+                        .accessDeniedHandler(new RestAccessDeniedHandler())
+                        .authenticationEntryPoint(new RestAuthenticationEntryPoint()))
                 .authorizeHttpRequests(auth -> auth
+                        // Allow CORS preflight requests
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/test/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/analysis/**").permitAll()
                         .requestMatchers("/api/files/uploads/**").permitAll()
                         .requestMatchers("/api/files/analysis/**").permitAll()
-                        .requestMatchers("/api/files/**").hasAnyRole("ADMIN", "USER")
-                        .requestMatchers("/api/analysis/**").hasAnyRole("ADMIN", "USER")
+                        .requestMatchers("/api/files/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
+                        .requestMatchers("/api/analysis/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
+                        // Allow everyone to access annotations endpoints (GET/PUT)
+                        .requestMatchers("/api/annotations/**").permitAll()
                         // Only ADMIN can create, update, delete transformer records
                         .requestMatchers(HttpMethod.POST, "/api/transformer-records").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/transformer-records/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/transformer-records/**").hasRole("ADMIN")
                         // Anyone authenticated can list or view transformer records
-                        .requestMatchers(HttpMethod.GET, "/api/transformer-records").hasAnyRole("ADMIN", "USER")
-                        .requestMatchers(HttpMethod.GET, "/api/transformer-records/**").hasAnyRole("ADMIN", "USER")
+                        .requestMatchers(HttpMethod.GET, "/api/transformer-records")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
+                        .requestMatchers(HttpMethod.GET, "/api/transformer-records/**")
+                        .hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
                         // Both ADMIN and USER can manage inspections
-                        .requestMatchers("/api/inspections/**").hasAnyRole("ADMIN", "USER")
+                        .requestMatchers("/api/inspections/**").hasAnyAuthority("ROLE_ADMIN", "ROLE_USER")
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
