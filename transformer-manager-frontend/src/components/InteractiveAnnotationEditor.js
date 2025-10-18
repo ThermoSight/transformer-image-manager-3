@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import {
   Modal,
   Button,
@@ -28,6 +28,8 @@ import {
 import axios from "axios";
 import { useAuth } from "../AuthContext";
 
+const API_BASE_URL = "http://localhost:8080/api/files";
+
 const InteractiveAnnotationEditor = ({
   show,
   onHide,
@@ -38,7 +40,6 @@ const InteractiveAnnotationEditor = ({
 }) => {
   const { token, isAuthenticated } = useAuth();
   const canvasRef = useRef(null);
-  const imageRef = useRef(null);
   const [image, setImage] = useState(null);
   const [annotation, setAnnotation] = useState(null);
   const [boxes, setBoxes] = useState([]);
@@ -60,6 +61,7 @@ const InteractiveAnnotationEditor = ({
   // History for undo/redo
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
+  const [imageError, setImageError] = useState("");
 
   // Available annotation types
   const ANNOTATION_TYPES = [
@@ -80,19 +82,18 @@ const InteractiveAnnotationEditor = ({
     }
   }, [show, analysisJobId]);
 
-  // Load image when boxedImagePath changes
-  useEffect(() => {
-    if (boxedImagePath) {
-      loadImage();
-    }
-  }, [boxedImagePath]);
-
   // Draw canvas when boxes or image changes
   useEffect(() => {
-    if (image && canvasRef.current) {
-      drawCanvas();
+    if (!image || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    if (canvas.width !== image.width || canvas.height !== image.height) {
+      canvas.width = image.width;
+      canvas.height = image.height;
     }
-  }, [boxes, image, selectedBox, drawingBox]);
+
+    drawCanvas();
+  }, [image, boxes, selectedBox, drawingBox]);
 
   const loadAnnotationData = async () => {
     setLoading(true);
@@ -130,7 +131,9 @@ const InteractiveAnnotationEditor = ({
       );
 
       setBoxes(annotationBoxes);
-      addToHistory(annotationBoxes);
+      const initialSnapshot = JSON.parse(JSON.stringify(annotationBoxes));
+      setHistory([initialSnapshot]);
+      setHistoryIndex(0);
     } catch (err) {
       console.error("Failed to load annotation data", err);
       setError(
@@ -143,22 +146,154 @@ const InteractiveAnnotationEditor = ({
     }
   };
 
-  const loadImage = () => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      setImage(img);
-      if (canvasRef.current) {
-        const canvas = canvasRef.current;
-        canvas.width = img.width;
-        canvas.height = img.height;
+  const normalizeRelativePath = useCallback((path) => {
+    if (!path) return null;
+    let normalized = path.trim();
+    if (normalized.startsWith(API_BASE_URL)) {
+      normalized = normalized.substring(API_BASE_URL.length);
+    }
+    normalized = normalized.replace(/\\/g, "/");
+    if (!normalized.startsWith("/")) {
+      normalized = "/" + normalized;
+    }
+    return normalized;
+  }, []);
+
+  const convertRawPathToUploadsRelative = useCallback(
+    (rawPath) => {
+      if (!rawPath) return null;
+      const normalized = rawPath.replace(/\\/g, "/");
+      const lower = normalized.toLowerCase();
+
+      const uploadsIdx = lower.indexOf("/uploads/");
+      if (uploadsIdx !== -1) {
+        return normalized.substring(uploadsIdx);
       }
-    };
-    img.onerror = () => {
-      setError("Failed to load image");
-    };
-    img.src = `http://localhost:8080/api/files${boxedImagePath}`;
-  };
+
+      const analysisIdx = lower.indexOf("/analysis/");
+      if (analysisIdx !== -1) {
+        return "/analysis" + normalized.substring(analysisIdx + "/analysis".length);
+      }
+
+      return null;
+    },
+    []
+  );
+
+  const deriveOriginalFromBoxed = useCallback(
+    (path) => {
+      if (!path) return null;
+      const normalized = path.replace(/\\/g, "/");
+      const fileName = normalized.substring(normalized.lastIndexOf("/") + 1);
+      if (!fileName) return null;
+
+      const dotIndex = fileName.lastIndexOf(".");
+      const extension = dotIndex !== -1 ? fileName.substring(dotIndex) : "";
+      const baseName = dotIndex !== -1 ? fileName.substring(0, dotIndex) : fileName;
+      const stripped =
+        baseName.endsWith("_boxed") && baseName.length > "_boxed".length
+          ? baseName.substring(0, baseName.length - "_boxed".length)
+          : baseName;
+
+      const candidate = `${stripped}${extension}`;
+      return `/uploads/${candidate}`;
+    },
+    []
+  );
+
+  const imageUrlCandidates = useMemo(() => {
+    const candidates = [];
+
+    if (originalResultJson) {
+      try {
+        const parsed =
+          typeof originalResultJson === "string"
+            ? JSON.parse(originalResultJson)
+            : originalResultJson;
+        const rawImagePath = parsed?.image || parsed?.original_image || null;
+        const derived = convertRawPathToUploadsRelative(rawImagePath);
+        if (derived) {
+          candidates.push(derived);
+        }
+      } catch (e) {
+        console.warn("Failed to parse originalResultJson", e);
+      }
+    }
+
+    const guessedOriginal = deriveOriginalFromBoxed(boxedImagePath);
+    if (guessedOriginal) {
+      candidates.push(guessedOriginal);
+    }
+
+    if (boxedImagePath) {
+      const normalized = normalizeRelativePath(boxedImagePath);
+      if (normalized) {
+        candidates.push(normalized);
+      }
+    }
+
+    const uniqueRelative = Array.from(
+      new Set(candidates.filter(Boolean).map((candidate) => normalizeRelativePath(candidate)))
+    );
+
+    return uniqueRelative
+      .map((relative) => `${API_BASE_URL}${relative}`)
+      .filter((url, index, self) => url && self.indexOf(url) === index);
+  }, [
+    originalResultJson,
+    boxedImagePath,
+    convertRawPathToUploadsRelative,
+    deriveOriginalFromBoxed,
+    normalizeRelativePath,
+  ]);
+
+  const loadImage = useCallback(
+    (sources) => {
+      if (!sources || sources.length === 0) {
+        setImageError("Unable to locate an image source for this annotation.");
+        return;
+      }
+
+      const uniqueSources = Array.from(new Set(sources.filter(Boolean)));
+      if (uniqueSources.length === 0) {
+        setImageError("Unable to locate an image source for this annotation.");
+        return;
+      }
+
+      const attemptLoad = (index) => {
+        if (index >= uniqueSources.length) {
+          setImageError("Failed to load annotation image.");
+          return;
+        }
+
+        const src = uniqueSources[index];
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+          setImageError("");
+          setImage(img);
+        };
+        img.onerror = () => {
+          attemptLoad(index + 1);
+        };
+        img.src = src;
+      };
+
+      setImage(null);
+      attemptLoad(0);
+    },
+    []
+  );
+
+  // Load image when modal opens and sources are ready
+  useEffect(() => {
+    if (!show) return;
+    if (imageUrlCandidates.length === 0) {
+      setImageError("Unable to resolve an image path for this annotation.");
+      return;
+    }
+    loadImage(imageUrlCandidates);
+  }, [show, imageUrlCandidates, loadImage]);
 
   const drawCanvas = () => {
     if (!canvasRef.current || !image) return;
@@ -398,14 +533,14 @@ const InteractiveAnnotationEditor = ({
       );
 
       // Update boxes array
-      setBoxes(
-        boxes.map((box) =>
+      setBoxes((prevBoxes) =>
+        prevBoxes.map((box) =>
           box.id === selectedBox.id
-            ? { ...updatedBox, action: "MODIFIED" }
+            ? { ...updatedBox, id: box.id, action: "MODIFIED" }
             : box
         )
       );
-      setSelectedBox(updatedBox);
+      setSelectedBox({ ...updatedBox, id: selectedBox.id });
     } else {
       // Update cursor based on hover
       const hoveredBox = getBoxAtPoint(x, y);
@@ -430,9 +565,11 @@ const InteractiveAnnotationEditor = ({
           id: `new-${Date.now()}`,
           action: "ADDED",
         };
-        const newBoxes = [...boxes, newBox];
-        setBoxes(newBoxes);
-        addToHistory(newBoxes);
+        setBoxes((prevBoxes) => {
+          const newBoxes = [...prevBoxes, newBox];
+          addToHistory(newBoxes);
+          return newBoxes;
+        });
       }
       setIsDrawing(false);
       setDrawingBox(null);
@@ -470,23 +607,27 @@ const InteractiveAnnotationEditor = ({
 
   const deleteSelectedBox = () => {
     if (selectedBox) {
-      const newBoxes = boxes.filter((box) => box.id !== selectedBox.id);
-      setBoxes(newBoxes);
+      setBoxes((prevBoxes) => {
+        const newBoxes = prevBoxes.filter((box) => box.id !== selectedBox.id);
+        addToHistory(newBoxes);
+        return newBoxes;
+      });
       setSelectedBox(null);
-      addToHistory(newBoxes);
     }
   };
 
   const updateSelectedBoxType = (newType) => {
     if (selectedBox) {
-      const updatedBoxes = boxes.map((box) =>
-        box.id === selectedBox.id
-          ? { ...box, type: newType, action: "MODIFIED" }
-          : box
-      );
-      setBoxes(updatedBoxes);
-      setSelectedBox({ ...selectedBox, type: newType });
-      addToHistory(updatedBoxes);
+      setBoxes((prevBoxes) => {
+        const updatedBoxes = prevBoxes.map((box) =>
+          box.id === selectedBox.id
+            ? { ...box, type: newType, action: "MODIFIED" }
+            : box
+        );
+        addToHistory(updatedBoxes);
+        return updatedBoxes;
+      });
+      setSelectedBox((prev) => (prev ? { ...prev, type: newType } : prev));
     }
   };
 
@@ -593,6 +734,12 @@ const InteractiveAnnotationEditor = ({
           </Alert>
         )}
 
+        {imageError && (
+          <Alert variant="warning" className="m-3">
+            {imageError}
+          </Alert>
+        )}
+
         <Row
           className="g-0"
           style={{ height: isFullscreen ? "calc(100vh - 120px)" : "600px" }}
@@ -693,7 +840,8 @@ const InteractiveAnnotationEditor = ({
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                   style={{
-                    maxWidth: "100%",
+                    width: "100%",
+                    height: "auto",
                     maxHeight: "100%",
                     cursor: "crosshair",
                     display: "block",
