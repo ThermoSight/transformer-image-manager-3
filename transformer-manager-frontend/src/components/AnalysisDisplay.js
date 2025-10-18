@@ -44,6 +44,7 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
   const [showAnnotationEditor, setShowAnnotationEditor] = useState(false);
   const [selectedJobForAnnotation, setSelectedJobForAnnotation] =
     useState(null);
+  const [imageRefreshToken, setImageRefreshToken] = useState(Date.now());
 
   const { token, isAuthenticated } = useAuth();
 
@@ -173,6 +174,18 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
     fetchAnalysisJobs();
   };
 
+  const handleAnnotationSaved = () => {
+    setImageRefreshToken(Date.now());
+  };
+
+  const buildImageSrc = (path) => {
+    if (!path) {
+      return "";
+    }
+    const separator = path.includes("?") ? "&" : "?";
+    return `http://localhost:8080/api/files${path}${separator}cb=${imageRefreshToken}`;
+  };
+
   const maintenanceImages =
     images?.filter((img) => img.type === "Maintenance") || [];
 
@@ -231,7 +244,7 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
                   <Card className="h-100">
                     <Card.Img
                       variant="top"
-                      src={`http://localhost:8080/api/files${image.filePath}`}
+                      src={buildImageSrc(image.filePath)}
                       style={{ height: "200px", objectFit: "cover" }}
                     />
                     <Card.Body>
@@ -448,6 +461,7 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
         analysisJobId={selectedJobForAnnotation?.id}
         boxedImagePath={selectedJobForAnnotation?.boxedImagePath}
         originalResultJson={selectedJobForAnnotation?.resultJson}
+        onSaved={handleAnnotationSaved}
       />
     </>
   );

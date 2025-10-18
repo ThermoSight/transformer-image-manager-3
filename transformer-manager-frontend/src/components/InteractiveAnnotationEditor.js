@@ -34,6 +34,7 @@ const InteractiveAnnotationEditor = ({
   analysisJobId,
   boxedImagePath,
   originalResultJson,
+  onSaved,
 }) => {
   const { token, isAuthenticated } = useAuth();
   const canvasRef = useRef(null);
@@ -522,6 +523,10 @@ const InteractiveAnnotationEditor = ({
         },
         { headers }
       );
+
+      if (onSaved) {
+        onSaved();
+      }
 
       setSuccess("Annotations saved successfully! The image has been updated.");
 

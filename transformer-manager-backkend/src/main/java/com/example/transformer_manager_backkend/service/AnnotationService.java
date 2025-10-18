@@ -12,12 +12,24 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.imageio.ImageIO;
+import java.awt.AlphaComposite;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 
 @Service
@@ -160,7 +172,7 @@ public class AnnotationService {
 
         // Update the JSON file and refresh the boxed image
         try {
-            updateJsonFileAndRefreshImage(annotation, modifiedJson);
+            updateJsonFileAndRefreshImage(annotation, modifiedJson, managedBoxes);
         } catch (Exception e) {
             logger.error("Failed to update JSON file and refresh image for annotation {}", annotationId, e);
             // Don't throw exception here to avoid transaction rollback
@@ -302,29 +314,319 @@ public class AnnotationService {
     /**
      * Update JSON file and refresh the boxed image using Python script
      */
-    private void updateJsonFileAndRefreshImage(Annotation annotation, String modifiedJson)
+    private void updateJsonFileAndRefreshImage(Annotation annotation, String modifiedJson, List<AnnotationBox> boxes)
             throws IOException, InterruptedException {
-        AnalysisJob job = annotation.getAnalysisJob();
-        Image image = job.getImage();
-
-        // Find the corresponding JSON file in uploads/analysis
-        String originalPath = image.getFilePath();
-        String fileName = originalPath.substring(originalPath.lastIndexOf("/") + 1);
-        String baseName = fileName.substring(0, fileName.lastIndexOf("."));
-        String jsonFileName = baseName + ".json";
-
-        Path jsonFilePath = Paths.get("uploads", "analysis", jsonFileName);
-
-        if (!Files.exists(jsonFilePath)) {
-            logger.warn("JSON file not found: {}", jsonFilePath);
+        if (annotation == null) {
+            logger.warn("Skipping image refresh because annotation is null");
             return;
         }
 
-        // Update the JSON file with modified data
-        Files.writeString(jsonFilePath, modifiedJson);
+        AnalysisJob job = annotation.getAnalysisJob();
+        if (job == null) {
+            logger.warn("Annotation {} has no associated analysis job; skipping image refresh", annotation.getId());
+            return;
+        }
+
+        String boxedImageWebPath = normalizeWebPath(firstNonBlank(
+                job.getBoxedImagePath(),
+                job.getImage() != null ? job.getImage().getFilePath() : null));
+
+        if (boxedImageWebPath == null) {
+            logger.warn("No boxed image path available for annotation {}", annotation.getId());
+            return;
+        }
+
+        String fileName = boxedImageWebPath.substring(boxedImageWebPath.lastIndexOf('/') + 1);
+        String extension = extractExtension(fileName);
+        String baseNameWithSuffix = removeExtension(fileName);
+        String baseName = stripBoxedSuffix(baseNameWithSuffix);
+
+        Path analysisDir = Paths.get("uploads", "analysis");
+        Files.createDirectories(analysisDir);
+
+        Path jsonFilePath = analysisDir.resolve(baseName + ".json");
+        Path boxedImagePath = analysisDir.resolve(baseName + "_boxed" + extension);
+        Path originalImagePath = resolveOriginalImagePath(baseName, extension, annotation);
+
+        String adjustedJson = adjustJsonPaths(annotation, modifiedJson, originalImagePath, boxedImagePath);
+        Files.writeString(jsonFilePath, adjustedJson, StandardCharsets.UTF_8);
         logger.info("Updated JSON file: {}", jsonFilePath);
 
-        // Run the refresh_boxes.py script to update the image
+        List<AnnotationBox> safeBoxes = boxes != null ? boxes : Collections.emptyList();
+        boolean refreshed = refreshBoxedImageWithJava(annotation, safeBoxes, boxedImagePath, originalImagePath, extension);
+        if (!refreshed) {
+            logger.info("Falling back to Python refresh script for annotation {}", annotation.getId());
+            runRefreshScript(jsonFilePath);
+        }
+    }
+
+    private String firstNonBlank(String... values) {
+        if (values == null) {
+            return null;
+        }
+        for (String value : values) {
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+    private String normalizeWebPath(String path) {
+        if (path == null || path.isBlank()) {
+            return null;
+        }
+        String normalized = path.trim().replace('\\', '/');
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        if (normalized.startsWith("uploads/")) {
+            normalized = normalized.substring("uploads/".length());
+        }
+        return normalized;
+    }
+
+    private String extractExtension(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return ".jpg";
+        }
+        int lastDot = fileName.lastIndexOf('.');
+        if (lastDot >= 0 && lastDot < fileName.length() - 1) {
+            return fileName.substring(lastDot);
+        }
+        return ".jpg";
+    }
+
+    private String removeExtension(String fileName) {
+        if (fileName == null || fileName.isBlank()) {
+            return "";
+        }
+        int lastDot = fileName.lastIndexOf('.');
+        return lastDot >= 0 ? fileName.substring(0, lastDot) : fileName;
+    }
+
+    private String stripBoxedSuffix(String name) {
+        if (name == null || name.isBlank()) {
+            return "";
+        }
+        return name.endsWith("_boxed") ? name.substring(0, name.length() - "_boxed".length()) : name;
+    }
+
+    private Path resolveOriginalImagePath(String baseName, String extension, Annotation annotation) {
+        String ext = (extension != null && !extension.isBlank()) ? extension : ".jpg";
+        if (!ext.startsWith(".")) {
+            ext = "." + ext;
+        }
+
+        Path expectedUpload = Paths.get("uploads", baseName + ext);
+        if (Files.exists(expectedUpload)) {
+            return expectedUpload;
+        }
+
+        Path fromJson = resolvePathFromJson(annotation);
+        if (fromJson != null && Files.exists(fromJson)) {
+            return fromJson;
+        }
+
+        Path boxed = Paths.get("uploads", "analysis", baseName + "_boxed" + ext);
+        if (Files.exists(boxed)) {
+            return boxed;
+        }
+
+        return expectedUpload;
+    }
+
+    private Path resolvePathFromJson(Annotation annotation) {
+        if (annotation == null || annotation.getOriginalResultJson() == null) {
+            return null;
+        }
+        try {
+            JsonNode node = objectMapper.readTree(annotation.getOriginalResultJson());
+            String imagePath = node.path("image").asText(null);
+            if (imagePath != null && !imagePath.isBlank()) {
+                return toLocalPath(imagePath);
+            }
+        } catch (Exception e) {
+            logger.warn("Unable to resolve original image path from annotation {}", annotation.getId(), e);
+        }
+        return null;
+    }
+
+    private Path toLocalPath(String rawPath) {
+        if (rawPath == null || rawPath.isBlank()) {
+            return null;
+        }
+        String normalized = rawPath.trim().replace('\\', '/');
+
+        if (normalized.startsWith("/mnt/") && normalized.length() > 6) {
+            char drive = normalized.charAt(5);
+            String remainder = normalized.substring(6).replace('/', '\\');
+            return Paths.get(String.valueOf(drive).toUpperCase(Locale.ROOT) + ":\\" + remainder);
+        }
+
+        if (normalized.startsWith("/uploads/")) {
+            String relative = normalized.substring("/uploads/".length());
+            return Paths.get("uploads", relative);
+        }
+
+        if (normalized.startsWith("/analysis/")) {
+            String relative = normalized.substring(1);
+            return Paths.get("uploads", relative);
+        }
+
+        while (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+        return Paths.get(normalized);
+    }
+
+    private String adjustJsonPaths(Annotation annotation, String json, Path originalImagePath, Path boxedImagePath) {
+        if (json == null || json.isBlank()) {
+            return json;
+        }
+        try {
+            ObjectNode node = (ObjectNode) objectMapper.readTree(json);
+            if (originalImagePath != null) {
+                node.put("image", originalImagePath.toAbsolutePath().toString());
+            }
+            if (boxedImagePath != null) {
+                node.put("boxed_image", boxedImagePath.toAbsolutePath().toString());
+            }
+            return objectMapper.writeValueAsString(node);
+        } catch (Exception e) {
+            logger.warn("Failed to adjust JSON paths for annotation {}", annotation != null ? annotation.getId() : "unknown", e);
+            return json;
+        }
+    }
+
+    private boolean refreshBoxedImageWithJava(Annotation annotation, List<AnnotationBox> boxes, Path boxedImagePath,
+            Path originalImagePath, String extensionWithDot) {
+        try {
+            Path sourcePath = originalImagePath;
+            if (sourcePath == null || !Files.exists(sourcePath)) {
+                logger.warn("Source image not found for annotation {} at {}", annotation.getId(), sourcePath);
+                return false;
+            }
+
+            BufferedImage sourceImage = ImageIO.read(sourcePath.toFile());
+            if (sourceImage == null) {
+                logger.warn("Failed to read source image for annotation {}", annotation.getId());
+                return false;
+            }
+
+            BufferedImage outputImage = new BufferedImage(
+                    sourceImage.getWidth(),
+                    sourceImage.getHeight(),
+                    BufferedImage.TYPE_INT_RGB);
+
+            Graphics2D graphics = outputImage.createGraphics();
+            graphics.drawImage(sourceImage, 0, 0, null);
+            graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+            float strokeWidth = Math.max(2f, Math.min(sourceImage.getWidth(), sourceImage.getHeight()) * 0.004f);
+            graphics.setStroke(new BasicStroke(strokeWidth));
+            graphics.setFont(new Font("SansSerif", Font.BOLD,
+                    Math.max(12, (int) (Math.min(sourceImage.getWidth(), sourceImage.getHeight()) * 0.03))));
+
+            for (AnnotationBox box : boxes) {
+                if (box == null) {
+                    continue;
+                }
+                int x = Math.max(0, box.getX());
+                int y = Math.max(0, box.getY());
+                int width = Math.max(1, box.getWidth());
+                int height = Math.max(1, box.getHeight());
+                Color color = chooseColorForLabel(box.getType());
+
+                graphics.setColor(color);
+                graphics.drawRect(x, y, width, height);
+
+                String label = buildLabel(box);
+                if (!label.isBlank()) {
+                    drawLabel(graphics, label, color, x, y, width, height, strokeWidth,
+                            outputImage.getWidth(), outputImage.getHeight());
+                }
+            }
+
+            graphics.dispose();
+
+            Files.createDirectories(boxedImagePath.getParent());
+            String formatName = (extensionWithDot != null && extensionWithDot.startsWith("."))
+                    ? extensionWithDot.substring(1)
+                    : extensionWithDot;
+            if (formatName == null || formatName.isBlank()) {
+                formatName = "jpg";
+            }
+
+            boolean written = ImageIO.write(outputImage, formatName, boxedImagePath.toFile());
+            if (!written) {
+                logger.warn("ImageIO could not write format {} for {}", formatName, boxedImagePath);
+                return false;
+            }
+
+            logger.info("Refreshed boxed image for annotation {} at {}", annotation.getId(), boxedImagePath);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to refresh boxed image via Java for annotation {}", annotation != null ? annotation.getId() : "unknown", e);
+            return false;
+        }
+    }
+
+    private void drawLabel(Graphics2D graphics, String label, Color boxColor,
+            int x, int y, int width, int height, float strokeWidth, int imageWidth, int imageHeight) {
+        FontMetrics metrics = graphics.getFontMetrics();
+        int padding = Math.max(4, Math.round(strokeWidth));
+        int textWidth = metrics.stringWidth(label);
+        int textHeight = metrics.getAscent() + metrics.getDescent();
+
+        int rectX = clamp(x, padding, Math.max(0, imageWidth - textWidth - padding * 2));
+        int rectY = y - textHeight - padding;
+        if (rectY < padding) {
+            rectY = clamp(y + height + padding, padding, imageHeight - textHeight - padding);
+        }
+
+        graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6f));
+        graphics.setColor(Color.BLACK);
+        graphics.fillRect(rectX - padding, rectY - padding / 2, textWidth + padding * 2, textHeight + padding);
+        graphics.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1f));
+        graphics.setColor(Color.WHITE);
+        graphics.drawString(label, rectX, rectY + textHeight - metrics.getDescent());
+        graphics.setColor(boxColor);
+    }
+
+    private Color chooseColorForLabel(String type) {
+        if (type == null) {
+            return Color.RED;
+        }
+        String normalized = type.toLowerCase(Locale.ROOT);
+        if (normalized.contains("potential") || normalized.contains("full wire overload")) {
+            return new Color(255, 215, 0);
+        }
+        if (normalized.contains("custom")) {
+            return new Color(0, 191, 255);
+        }
+        return Color.RED;
+    }
+
+    private String buildLabel(AnnotationBox box) {
+        StringBuilder label = new StringBuilder();
+        if (box.getType() != null && !box.getType().isBlank()) {
+            label.append(box.getType());
+        }
+        if (box.getConfidence() != null) {
+            if (label.length() > 0) {
+                label.append(" ");
+            }
+            label.append("(").append(String.format(Locale.ROOT, "%.2f", box.getConfidence())).append(")");
+        }
+        return label.toString();
+    }
+
+    private int clamp(int value, int min, int max) {
+        return Math.max(min, Math.min(value, max));
+    }
+
+    private void runRefreshScript(Path jsonFilePath) throws IOException, InterruptedException {
         String command = String.format("%s \"%s\" --json \"%s\"",
                 pythonExecutable,
                 refreshScriptPath,
@@ -333,7 +635,7 @@ public class AnnotationService {
         logger.info("Running refresh command: {}", command);
 
         ProcessBuilder processBuilder = new ProcessBuilder();
-        if (System.getProperty("os.name").toLowerCase().contains("windows")) {
+        if (System.getProperty("os.name").toLowerCase(Locale.ROOT).contains("windows")) {
             processBuilder.command("cmd", "/c", command);
         } else {
             processBuilder.command("bash", "-c", command);
@@ -341,7 +643,6 @@ public class AnnotationService {
 
         Process process = processBuilder.start();
 
-        // Capture output
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
                 BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
 
@@ -349,7 +650,6 @@ public class AnnotationService {
             while ((line = reader.readLine()) != null) {
                 logger.info("Refresh script output: {}", line);
             }
-
             while ((line = errorReader.readLine()) != null) {
                 logger.warn("Refresh script error: {}", line);
             }
@@ -357,7 +657,7 @@ public class AnnotationService {
 
         int exitCode = process.waitFor();
         if (exitCode == 0) {
-            logger.info("Successfully refreshed boxed image for annotation {}", annotation.getId());
+            logger.info("Successfully refreshed boxed image via Python script");
         } else {
             logger.error("Refresh script failed with exit code: {}", exitCode);
         }
