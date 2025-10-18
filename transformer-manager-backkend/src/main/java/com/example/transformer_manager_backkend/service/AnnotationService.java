@@ -166,16 +166,23 @@ public class AnnotationService {
 
         // Update modified JSON based on current managed boxes
         String modifiedJson = createModifiedJson(annotation, managedBoxes);
-        annotation.setModifiedResultJson(modifiedJson);
+        String persistedJson = modifiedJson;
 
-        annotation = annotationRepository.save(annotation);
-
-        // Update the JSON file and refresh the boxed image
+        // Update the JSON file, refresh image, and capture the final JSON that was written
         try {
-            updateJsonFileAndRefreshImage(annotation, modifiedJson, managedBoxes);
+            persistedJson = updateJsonFileAndRefreshImage(annotation, modifiedJson, managedBoxes);
         } catch (Exception e) {
             logger.error("Failed to update JSON file and refresh image for annotation {}", annotationId, e);
-            // Don't throw exception here to avoid transaction rollback
+            persistedJson = modifiedJson;
+        }
+
+        annotation.setModifiedResultJson(persistedJson);
+        annotation = annotationRepository.save(annotation);
+
+        AnalysisJob job = annotation.getAnalysisJob();
+        if (job != null) {
+            job.setResultJson(persistedJson);
+            analysisJobRepository.save(job);
         }
 
         logger.info("Updated annotation {} with {} boxes", annotationId, managedBoxes.size());
@@ -314,17 +321,17 @@ public class AnnotationService {
     /**
      * Update JSON file and refresh the boxed image using Python script
      */
-    private void updateJsonFileAndRefreshImage(Annotation annotation, String modifiedJson, List<AnnotationBox> boxes)
+    private String updateJsonFileAndRefreshImage(Annotation annotation, String modifiedJson, List<AnnotationBox> boxes)
             throws IOException, InterruptedException {
         if (annotation == null) {
             logger.warn("Skipping image refresh because annotation is null");
-            return;
+            return modifiedJson;
         }
 
         AnalysisJob job = annotation.getAnalysisJob();
         if (job == null) {
             logger.warn("Annotation {} has no associated analysis job; skipping image refresh", annotation.getId());
-            return;
+            return modifiedJson;
         }
 
         String boxedImageWebPath = normalizeWebPath(firstNonBlank(
@@ -333,7 +340,7 @@ public class AnnotationService {
 
         if (boxedImageWebPath == null) {
             logger.warn("No boxed image path available for annotation {}", annotation.getId());
-            return;
+            return modifiedJson;
         }
 
         String fileName = boxedImageWebPath.substring(boxedImageWebPath.lastIndexOf('/') + 1);
@@ -345,7 +352,8 @@ public class AnnotationService {
         Files.createDirectories(analysisDir);
 
         Path jsonFilePath = analysisDir.resolve(baseName + ".json");
-        Path boxedImagePath = analysisDir.resolve(baseName + "_boxed" + extension);
+        String boxedFileName = baseName + "_boxed" + extension;
+        Path boxedImagePath = analysisDir.resolve(boxedFileName);
         Path originalImagePath = resolveOriginalImagePath(baseName, extension, annotation);
 
         String adjustedJson = adjustJsonPaths(annotation, modifiedJson, originalImagePath, boxedImagePath);
@@ -358,6 +366,16 @@ public class AnnotationService {
             logger.info("Falling back to Python refresh script for annotation {}", annotation.getId());
             runRefreshScript(jsonFilePath);
         }
+
+        String webBoxedPath = "/analysis/" + boxedFileName;
+        if (job != null) {
+            job.setBoxedImagePath(webBoxedPath);
+            if (job.getImage() != null) {
+                job.getImage().setFilePath(webBoxedPath);
+            }
+        }
+
+        return adjustedJson;
     }
 
     private String firstNonBlank(String... values) {

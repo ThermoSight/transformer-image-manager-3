@@ -36,6 +36,7 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
   const [loading, setLoading] = useState(false);
   const [queueStatus, setQueueStatus] = useState(null);
   const [selectedJson, setSelectedJson] = useState(null);
+  const [selectedJsonJob, setSelectedJsonJob] = useState(null);
   const [showJsonModal, setShowJsonModal] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
@@ -149,17 +150,71 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
         `http://localhost:8080/api/analysis/job/${jobId}`,
         isAuthenticated ? { headers: { Authorization: `Bearer ${token}` } } : {}
       );
-      if (response.data.resultJson) {
-        setSelectedJson(JSON.parse(response.data.resultJson));
-        setShowJsonModal(true);
+      const jobData = response.data;
+      if (!jobData || !jobData.resultJson) {
+        setToastMessage("JSON results are not available for this analysis yet.");
+        setShowToast(true);
+        return;
       }
+
+      setSelectedJsonJob(jobData);
+      let parsedJson;
+      try {
+        parsedJson = JSON.parse(jobData.resultJson);
+      } catch (parseError) {
+        console.warn("Failed to parse result JSON, falling back to raw string", parseError);
+        parsedJson = jobData.resultJson;
+      }
+      setSelectedJson(parsedJson);
+      setShowJsonModal(true);
     } catch (err) {
       console.error("Failed to fetch job details", err);
+      setToastMessage("Failed to load JSON results for download.");
+      setShowToast(true);
     }
   };
 
   const getImageJob = (imageId) => {
     return analysisJobs.find((job) => job.image.id === imageId);
+  };
+
+  const buildJsonDownloadUrl = (job) => {
+    if (!job || !job.boxedImagePath) {
+      return null;
+    }
+
+    const normalizedPath = job.boxedImagePath.replace(/\\/g, "/");
+    const segments = normalizedPath.split("/");
+    const boxedFileName = segments[segments.length - 1];
+    if (!boxedFileName) {
+      return null;
+    }
+
+    const dotIndex = boxedFileName.lastIndexOf(".");
+    const nameWithoutExtension =
+      dotIndex >= 0 ? boxedFileName.substring(0, dotIndex) : boxedFileName;
+    const baseName = nameWithoutExtension.endsWith("_boxed")
+      ? nameWithoutExtension.substring(0, nameWithoutExtension.length - "_boxed".length)
+      : nameWithoutExtension;
+    const jsonFileName = `${baseName}.json`;
+
+    return `http://localhost:8080/api/files/analysis/${jsonFileName}`;
+  };
+
+  const downloadJsonResults = (job) => {
+    const url = buildJsonDownloadUrl(job);
+    if (!url) {
+      setToastMessage("JSON file not available for download.");
+      setShowToast(true);
+      return;
+    }
+
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = url.substring(url.lastIndexOf("/") + 1) || "annotation.json";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const openAnnotationEditor = (job) => {
@@ -176,7 +231,16 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
 
   const handleAnnotationSaved = () => {
     setImageRefreshToken(Date.now());
+    fetchAnalysisJobs();
   };
+
+  const closeJsonModal = () => {
+    setShowJsonModal(false);
+    setSelectedJson(null);
+    setSelectedJsonJob(null);
+  };
+
+  const jsonModalDownloadUrl = buildJsonDownloadUrl(selectedJsonJob);
 
   const buildImageSrc = (path) => {
     if (!path) {
@@ -239,6 +303,7 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
           <Row>
             {maintenanceImages.map((image) => {
               const job = getImageJob(image.id);
+              const jsonDownloadUrl = buildJsonDownloadUrl(job);
               return (
                 <Col md={6} lg={4} key={image.id} className="mb-4">
                   <Card className="h-100">
@@ -368,6 +433,22 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
                               View JSON
                             </Button>
                           )}
+
+                        {job &&
+                          job.status === "COMPLETED" &&
+                          jsonDownloadUrl && (
+                            <Button
+                              variant="outline-secondary"
+                              size="sm"
+                              onClick={() => downloadJsonResults(job)}
+                            >
+                              <FontAwesomeIcon
+                                icon={faDownload}
+                                className="me-1"
+                              />
+                              Download JSON
+                            </Button>
+                          )}
                       </div>
                     </Card.Body>
                   </Card>
@@ -379,11 +460,7 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
       </Card>
 
       {/* JSON Results Modal */}
-      <Modal
-        show={showJsonModal}
-        onHide={() => setShowJsonModal(false)}
-        size="lg"
-      >
+      <Modal show={showJsonModal} onHide={closeJsonModal} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>Analysis Results (JSON)</Modal.Title>
         </Modal.Header>
@@ -436,7 +513,20 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
           )}
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowJsonModal(false)}>
+          {jsonModalDownloadUrl && (
+            <Button
+              variant="primary"
+              as="a"
+              href={jsonModalDownloadUrl}
+              download
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <FontAwesomeIcon icon={faDownload} className="me-1" />
+              Download JSON
+            </Button>
+          )}
+          <Button variant="secondary" onClick={closeJsonModal}>
             Close
           </Button>
         </Modal.Footer>
