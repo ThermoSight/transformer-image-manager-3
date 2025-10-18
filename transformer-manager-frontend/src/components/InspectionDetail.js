@@ -18,7 +18,7 @@ import {
   faMapMarkerAlt,
   faUser,
   faCalendar,
-  faTrash,
+  faTrashCan,
   faClock,
   faPlus,
   faTimes,
@@ -606,32 +606,41 @@ const InspectionDetail = () => {
                           />
                           {/* Delete Button Overlay - USING SIMPLE VERSION FOR TESTING */}
                           {canDeleteImagesSimple() && (
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              style={{
-                                position: "absolute",
-                                top: "8px",
-                                right: "8px",
-                                opacity: 0.9,
-                                width: "36px",
-                                height: "36px",
-                                borderRadius: "8px", // Square with rounded corners
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                border: "2px solid white",
-                                boxShadow: "0 2px 6px rgba(0,0,0,0.4)",
-                                zIndex: 10,
-                                backgroundColor: "#dc3545",
-                                fontWeight: "bold",
-                              }}
+                            <button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeleteImage(image.id);
                               }}
                               disabled={deletingImageId === image.id}
                               title="Delete this image"
+                              style={{
+                                position: "absolute",
+                                top: "8px",
+                                right: "8px",
+                                width: "32px",
+                                height: "32px",
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                backgroundColor: "rgba(33,37,41,0.65)", // subtle dark translucent
+                                border: "1px solid rgba(255,255,255,0.8)",
+                                boxShadow: "0 2px 6px rgba(0,0,0,0.35)",
+                                backdropFilter: "blur(2px)",
+                                cursor: "pointer",
+                                transition:
+                                  "background 0.15s ease, transform 0.1s ease, opacity 0.15s ease",
+                                zIndex: 10,
+                                color: "white",
+                              }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.backgroundColor =
+                                  "#dc3545")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.backgroundColor =
+                                  "rgba(33,37,41,0.65)")
+                              }
                             >
                               {deletingImageId === image.id ? (
                                 <Spinner
@@ -640,9 +649,12 @@ const InspectionDetail = () => {
                                   size="sm"
                                 />
                               ) : (
-                                <FontAwesomeIcon icon={faTrash} />
+                                <FontAwesomeIcon
+                                  icon={faTrashCan}
+                                  style={{ fontSize: "14px" }}
+                                />
                               )}
-                            </Button>
+                            </button>
                           )}
                         </div>
                         <Card.Body>
