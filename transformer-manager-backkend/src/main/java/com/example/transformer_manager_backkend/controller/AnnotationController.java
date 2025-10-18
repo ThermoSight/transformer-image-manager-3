@@ -4,12 +4,21 @@ import com.example.transformer_manager_backkend.entity.Annotation;
 import com.example.transformer_manager_backkend.repository.AdminRepository;
 import com.example.transformer_manager_backkend.repository.UserRepository;
 import com.example.transformer_manager_backkend.service.AnnotationService;
-import org.springframework.http.ResponseEntity;
 import jakarta.annotation.security.PermitAll;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.List;
 import java.util.Optional;
@@ -107,6 +116,26 @@ public class AnnotationController {
         } else {
             return ResponseEntity.notFound().build();
         }
+    }
+
+    /**
+     * Export merged annotation report (AI + user edits) as downloadable JSON
+     */
+    @GetMapping("/analysis-job/{analysisJobId}/export")
+    @PermitAll
+    public ResponseEntity<byte[]> exportAnnotationReport(@PathVariable Long analysisJobId) {
+        Optional<String> reportJson = annotationService.generateAnnotationReport(analysisJobId);
+        if (reportJson.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        byte[] bytes = reportJson.get().getBytes(StandardCharsets.UTF_8);
+        String fileName = "annotation-report-" + analysisJobId + ".json";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=" + fileName)
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(bytes);
     }
 
     /**

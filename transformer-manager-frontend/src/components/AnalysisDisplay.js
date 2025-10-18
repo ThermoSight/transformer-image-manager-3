@@ -152,7 +152,9 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
       );
       const jobData = response.data;
       if (!jobData || !jobData.resultJson) {
-        setToastMessage("JSON results are not available for this analysis yet.");
+        setToastMessage(
+          "JSON results are not available for this analysis yet."
+        );
         setShowToast(true);
         return;
       }
@@ -162,7 +164,10 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
       try {
         parsedJson = JSON.parse(jobData.resultJson);
       } catch (parseError) {
-        console.warn("Failed to parse result JSON, falling back to raw string", parseError);
+        console.warn(
+          "Failed to parse result JSON, falling back to raw string",
+          parseError
+        );
         parsedJson = jobData.resultJson;
       }
       setSelectedJson(parsedJson);
@@ -178,43 +183,42 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
     return analysisJobs.find((job) => job.image.id === imageId);
   };
 
-  const buildJsonDownloadUrl = (job) => {
-    if (!job || !job.boxedImagePath) {
-      return null;
-    }
-
-    const normalizedPath = job.boxedImagePath.replace(/\\/g, "/");
-    const segments = normalizedPath.split("/");
-    const boxedFileName = segments[segments.length - 1];
-    if (!boxedFileName) {
-      return null;
-    }
-
-    const dotIndex = boxedFileName.lastIndexOf(".");
-    const nameWithoutExtension =
-      dotIndex >= 0 ? boxedFileName.substring(0, dotIndex) : boxedFileName;
-    const baseName = nameWithoutExtension.endsWith("_boxed")
-      ? nameWithoutExtension.substring(0, nameWithoutExtension.length - "_boxed".length)
-      : nameWithoutExtension;
-    const jsonFileName = `${baseName}.json`;
-
-    return `http://localhost:8080/api/files/analysis/${jsonFileName}`;
-  };
-
-  const downloadJsonResults = (job) => {
-    const url = buildJsonDownloadUrl(job);
-    if (!url) {
-      setToastMessage("JSON file not available for download.");
+  const downloadAnnotationReport = async (job) => {
+    if (!job) {
+      setToastMessage("Select a report to download.");
       setShowToast(true);
       return;
     }
 
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = url.substring(url.lastIndexOf("/") + 1) || "annotation.json";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    try {
+      const config = {
+        responseType: "blob",
+      };
+      if (isAuthenticated && token) {
+        config.headers = {
+          Authorization: `Bearer ${token}`,
+        };
+      }
+
+      const response = await axios.get(
+        `http://localhost:8080/api/annotations/analysis-job/${job.id}/export`,
+        config
+      );
+
+      const blob = new Blob([response.data], { type: "application/json" });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `annotation-report-${job.id}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Failed to download annotation report", err);
+      setToastMessage("Failed to download annotation report.");
+      setShowToast(true);
+    }
   };
 
   const openAnnotationEditor = (job) => {
@@ -239,8 +243,6 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
     setSelectedJson(null);
     setSelectedJsonJob(null);
   };
-
-  const jsonModalDownloadUrl = buildJsonDownloadUrl(selectedJsonJob);
 
   const buildImageSrc = (path) => {
     if (!path) {
@@ -303,7 +305,6 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
           <Row>
             {maintenanceImages.map((image) => {
               const job = getImageJob(image.id);
-              const jsonDownloadUrl = buildJsonDownloadUrl(job);
               return (
                 <Col md={6} lg={4} key={image.id} className="mb-4">
                   <Card className="h-100">
@@ -434,21 +435,19 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
                             </Button>
                           )}
 
-                        {job &&
-                          job.status === "COMPLETED" &&
-                          jsonDownloadUrl && (
-                            <Button
-                              variant="outline-secondary"
-                              size="sm"
-                              onClick={() => downloadJsonResults(job)}
-                            >
-                              <FontAwesomeIcon
-                                icon={faDownload}
-                                className="me-1"
-                              />
-                              Download JSON
-                            </Button>
-                          )}
+                        {job && job.status === "COMPLETED" && (
+                          <Button
+                            variant="outline-secondary"
+                            size="sm"
+                            onClick={() => downloadAnnotationReport(job)}
+                          >
+                            <FontAwesomeIcon
+                              icon={faDownload}
+                              className="me-1"
+                            />
+                            Export Report
+                          </Button>
+                        )}
                       </div>
                     </Card.Body>
                   </Card>
@@ -513,17 +512,13 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
           )}
         </Modal.Body>
         <Modal.Footer>
-          {jsonModalDownloadUrl && (
+          {selectedJsonJob && (
             <Button
               variant="primary"
-              as="a"
-              href={jsonModalDownloadUrl}
-              download
-              target="_blank"
-              rel="noopener noreferrer"
+              onClick={() => downloadAnnotationReport(selectedJsonJob)}
             >
               <FontAwesomeIcon icon={faDownload} className="me-1" />
-              Download JSON
+              Export Report
             </Button>
           )}
           <Button variant="secondary" onClick={closeJsonModal}>

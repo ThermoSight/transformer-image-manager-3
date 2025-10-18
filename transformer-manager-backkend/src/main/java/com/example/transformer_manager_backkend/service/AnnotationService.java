@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -187,6 +188,148 @@ public class AnnotationService {
 
         logger.info("Updated annotation {} with {} boxes", annotationId, managedBoxes.size());
         return annotation;
+    }
+
+    /**
+     * Build merged annotation report (AI detections + user edits + metadata)
+     */
+    @Transactional(readOnly = true)
+    public Optional<String> generateAnnotationReport(Long analysisJobId) {
+        Optional<Annotation> annotationOpt = annotationRepository.findByAnalysisJobId(analysisJobId);
+        if (annotationOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        Annotation annotation = annotationOpt.get();
+        try {
+            ObjectNode root = objectMapper.createObjectNode();
+            root.put("reportGeneratedAt", LocalDateTime.now().toString());
+            root.put("analysisJobId", analysisJobId);
+            root.put("annotationId", annotation.getId());
+            root.put("annotationType", annotation.getAnnotationType().name());
+            if (annotation.getComments() != null) {
+                root.put("comments", annotation.getComments());
+            }
+            if (annotation.getCreatedAt() != null) {
+                root.put("createdAt", annotation.getCreatedAt().toString());
+            }
+            if (annotation.getUpdatedAt() != null) {
+                root.put("updatedAt", annotation.getUpdatedAt().toString());
+            }
+
+            AnalysisJob job = annotation.getAnalysisJob();
+            if (job != null) {
+                ObjectNode jobNode = root.putObject("analysisJob");
+                jobNode.put("status", job.getStatus().name());
+                if (job.getCompletedAt() != null) {
+                    jobNode.put("completedAt", job.getCompletedAt().toString());
+                }
+                if (job.getStartedAt() != null) {
+                    jobNode.put("startedAt", job.getStartedAt().toString());
+                }
+                if (job.getResultJson() != null) {
+                    jobNode.put("resultJsonLength", job.getResultJson().length());
+                }
+                if (job.getBoxedImagePath() != null) {
+                    jobNode.put("boxedImagePath", job.getBoxedImagePath());
+                }
+                if (job.getImage() != null) {
+                    Image image = job.getImage();
+                    ObjectNode imageNode = jobNode.putObject("image");
+                    imageNode.put("id", image.getId());
+                    if (image.getFilePath() != null) {
+                        imageNode.put("filePath", image.getFilePath());
+                    }
+                    if (image.getType() != null) {
+                        imageNode.put("type", image.getType());
+                    }
+                    if (image.getInspection() != null) {
+                        imageNode.put("inspectionId", image.getInspection().getId());
+                    }
+                    if (image.getTransformerRecord() != null) {
+                        imageNode.put("transformerId", image.getTransformerRecord().getId());
+                    }
+                }
+            }
+
+            String annotatorType = "UNKNOWN";
+            if (annotation.getAnnotatedByUser() != null) {
+                annotatorType = "USER";
+            } else if (annotation.getAnnotatedByAdmin() != null) {
+                annotatorType = "ADMIN";
+            }
+            ObjectNode annotatorNode = root.putObject("annotator");
+            annotatorNode.put("type", annotatorType);
+            annotatorNode.put("displayName", annotation.getAnnotatorDisplayName());
+
+            JsonNode originalDetections = readJsonSafely(annotation.getOriginalResultJson());
+            JsonNode finalAnnotations = readJsonSafely(annotation.getModifiedResultJson());
+            root.set("originalAIDetections", originalDetections);
+            root.set("finalUserAnnotations", finalAnnotations);
+
+            ArrayNode boxesArray = objectMapper.createArrayNode();
+            int addedCount = 0;
+            int modifiedCount = 0;
+            int deletedCount = 0;
+            int unchangedCount = 0;
+
+            if (annotation.getAnnotationBoxes() != null) {
+                for (AnnotationBox box : annotation.getAnnotationBoxes()) {
+                    ObjectNode boxNode = objectMapper.createObjectNode();
+                    boxNode.put("x", box.getX());
+                    boxNode.put("y", box.getY());
+                    boxNode.put("width", box.getWidth());
+                    boxNode.put("height", box.getHeight());
+                    if (box.getType() != null) {
+                        boxNode.put("type", box.getType());
+                    }
+                    if (box.getConfidence() != null) {
+                        boxNode.put("confidence", box.getConfidence());
+                    }
+                    if (box.getComments() != null) {
+                        boxNode.put("comments", box.getComments());
+                    }
+                    AnnotationBox.BoxAction action = box.getAction();
+                    if (action != null) {
+                        boxNode.put("action", action.name());
+                        switch (action) {
+                            case ADDED:
+                                addedCount++;
+                                break;
+                            case MODIFIED:
+                                modifiedCount++;
+                                break;
+                            case DELETED:
+                                deletedCount++;
+                                break;
+                            default:
+                                unchangedCount++;
+                                break;
+                        }
+                    } else {
+                        unchangedCount++;
+                    }
+                    boxesArray.add(boxNode);
+                }
+            }
+            root.set("annotationBoxes", boxesArray);
+
+            ObjectNode summaryNode = root.putObject("summary");
+            summaryNode.put("totalBoxes", boxesArray.size());
+            summaryNode.put("addedBoxes", addedCount);
+            summaryNode.put("modifiedBoxes", modifiedCount);
+            summaryNode.put("deletedBoxes", deletedCount);
+            summaryNode.put("unchangedBoxes", unchangedCount);
+            summaryNode.put("annotatorType", annotatorType);
+            summaryNode.put("annotatorName", annotation.getAnnotatorDisplayName());
+            summaryNode.put("commentsProvided",
+                    annotation.getComments() != null && !annotation.getComments().isBlank());
+
+            return Optional.of(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(root));
+        } catch (Exception e) {
+            logger.error("Failed to generate annotation report for analysis job {}", analysisJobId, e);
+            return Optional.empty();
+        }
     }
 
     /**
@@ -376,6 +519,18 @@ public class AnnotationService {
         }
 
         return adjustedJson;
+    }
+
+    private JsonNode readJsonSafely(String json) {
+        if (json == null || json.isBlank()) {
+            return objectMapper.createObjectNode();
+        }
+        try {
+            return objectMapper.readTree(json);
+        } catch (Exception e) {
+            logger.warn("Failed to parse JSON content safely", e);
+            return objectMapper.createObjectNode();
+        }
     }
 
     private String firstNonBlank(String... values) {
