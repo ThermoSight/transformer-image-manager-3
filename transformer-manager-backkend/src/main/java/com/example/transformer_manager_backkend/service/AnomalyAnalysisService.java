@@ -1,17 +1,5 @@
 package com.example.transformer_manager_backkend.service;
 
-import com.example.transformer_manager_backkend.entity.AnalysisJob;
-import com.example.transformer_manager_backkend.entity.Image;
-import com.example.transformer_manager_backkend.repository.AnalysisJobRepository;
-import com.example.transformer_manager_backkend.repository.ImageRepository;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -26,6 +14,19 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.transformer_manager_backkend.entity.AnalysisJob;
+import com.example.transformer_manager_backkend.entity.Image;
+import com.example.transformer_manager_backkend.repository.AnalysisJobRepository;
+import com.example.transformer_manager_backkend.repository.ImageRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class AnomalyAnalysisService {
@@ -261,7 +262,7 @@ public class AnomalyAnalysisService {
 
         // Prepare WSL command with sensitivity
         String wslCommand = String.format(
-                "wsl --cd \"/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference\" -- ./run_inference.sh --venv \"%s\" --input \"%s\" --outdir \"%s\" --sensitivity %.2f",
+                "wsl --cd \"/mnt/f/github/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference\" -- ./run_inference.sh --venv \"%s\" --input \"%s\" --outdir \"%s\" --sensitivity %.2f",
                 venvPath,
                 wslInputDir,
                 wslOutputDir,
