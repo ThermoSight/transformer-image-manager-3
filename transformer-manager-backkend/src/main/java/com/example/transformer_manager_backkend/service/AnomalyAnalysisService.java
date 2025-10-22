@@ -39,10 +39,10 @@ public class AnomalyAnalysisService {
     private final ObjectMapper objectMapper;
     private final ExecutorService executorService;
 
-    @Value("${app.anomaly.model.path:C:/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference}")
-    private String modelPath;
+    @Value("${app.anomaly.model.path:f:/github/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference}")
+    private String modelPath; 
 
-    @Value("${app.anomaly.venv.path:/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/.venv}")
+    @Value("${app.anomaly.venv.path:/mnt/f/github/transformer-image-manager-2/automatic-anamoly-detection/.venv}")
     private String venvPath;
 
     @Value("${app.anomaly.temp.dir:./temp/anomaly-analysis}")

@@ -41,6 +41,7 @@ public class AnnotationService {
     private final AnnotationRepository annotationRepository;
     private final AnnotationBoxRepository annotationBoxRepository;
     private final AnalysisJobRepository analysisJobRepository;
+    private final ModelTrainingService modelTrainingService;
     private final ObjectMapper objectMapper;
 
     @Value("${app.annotation.python.executable:python}")
@@ -51,11 +52,13 @@ public class AnnotationService {
 
     public AnnotationService(AnnotationRepository annotationRepository,
             AnnotationBoxRepository annotationBoxRepository,
-            AnalysisJobRepository analysisJobRepository) {
+            AnalysisJobRepository analysisJobRepository,
+            ModelTrainingService modelTrainingService) {
         this.annotationRepository = annotationRepository;
         this.annotationBoxRepository = annotationBoxRepository;
         this.analysisJobRepository = analysisJobRepository;
         this.objectMapper = new ObjectMapper();
+        this.modelTrainingService = modelTrainingService;
     }
 
     /**
@@ -184,6 +187,13 @@ public class AnnotationService {
         if (job != null) {
             job.setResultJson(persistedJson);
             analysisJobRepository.save(job);
+        }
+
+        // Record feedback for reinforcement training pipeline
+        try {
+            modelTrainingService.handleAnnotationFeedback(annotation);
+        } catch (Exception feedbackException) {
+            logger.warn("Failed to pass annotation {} to model training service", annotationId, feedbackException);
         }
 
         logger.info("Updated annotation {} with {} boxes", annotationId, managedBoxes.size());

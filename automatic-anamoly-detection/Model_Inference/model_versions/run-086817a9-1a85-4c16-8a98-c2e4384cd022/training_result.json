@@ -1,0 +1,34 @@
+{
+  "status": "ok",
+  "message": "Model version created",
+  "version_tag": "v0001",
+  "run_id": "086817a9-1a85-4c16-8a98-c2e4384cd022",
+  "created_at": "2025-10-22T03:37:13.372952Z",
+  "dataset_record_count": 1,
+  "previous_dataset_count": 0,
+  "box_count": 4,
+  "previous_box_count": 0,
+  "appended_annotations": 1,
+  "appended_boxes": 4,
+  "class_counts": {
+    "Point Overload (Potential)": 1,
+    "Point Overload (Faulty)": 1,
+    "Loose Joint (Faulty)": 1,
+    "Tiny Potential Spot": 1
+  },
+  "action_counts": {
+    "MODIFIED": 3,
+    "UNCHANGED": 1
+  },
+  "avg_box_area": 38160.5,
+  "min_box_area": 1224,
+  "max_box_area": 131400,
+  "avg_confidence": 0.6255,
+  "annotation_ids": [
+    1
+  ],
+  "model_path": "F:\\github\\transformer-image-manager-3\\automatic-anamoly-detection\\Model_Inference\\model_versions\\v0001\\model.ckpt",
+  "relative_model_path": "v0001\\model.ckpt",
+  "version_directory": "F:\\github\\transformer-image-manager-3\\automatic-anamoly-detection\\Model_Inference\\model_versions\\v0001",
+  "notes": "Manual trigger from dashboard"
+}

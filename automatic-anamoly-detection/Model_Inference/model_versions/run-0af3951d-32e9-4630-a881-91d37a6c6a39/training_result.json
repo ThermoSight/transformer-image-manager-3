@@ -1,0 +1,13 @@
+{
+  "status": "skipped",
+  "message": "No new annotated feedback available",
+  "run_id": "0af3951d-32e9-4630-a881-91d37a6c6a39",
+  "created_at": "2025-10-22T03:37:34.893833Z",
+  "dataset_record_count": 1,
+  "previous_dataset_count": 1,
+  "box_count": 4,
+  "previous_box_count": 4,
+  "appended_annotations": 0,
+  "appended_boxes": 0,
+  "notes": "Manual trigger from dashboard"
+}

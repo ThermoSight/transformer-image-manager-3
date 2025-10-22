@@ -17,6 +17,7 @@ import {
   faBolt,
   faClipboardCheck,
   faCog,
+  faBrain,
 } from "@fortawesome/free-solid-svg-icons";
 import QueueStatus from "./QueueStatus";
 import SettingsModal from "./SettingsModal";
@@ -68,6 +69,12 @@ const MoodleNavbar = () => {
                   <FontAwesomeIcon icon={faUpload} className="me-1" />
                   Upload Inspection
                 </Nav.Link>
+                {isAdmin && (
+                  <Nav.Link as={Link} to="/model-training">
+                    <FontAwesomeIcon icon={faBrain} className="me-1" />
+                    Model Feedback
+                  </Nav.Link>
+                )}
               </>
             )}
           </Nav>

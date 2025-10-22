@@ -1,0 +1,2 @@
+F:\github\transformer-image-manager-3\automatic-anamoly-detection\Model_Inference\update_model_from_feedback.py:231: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+  timestamp = datetime.utcnow().isoformat() + "Z"

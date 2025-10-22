@@ -77,6 +77,26 @@ The system analyzes filtered images using HSV color analysis to classify specifi
   - Confidence score calculations
   - Merge distance for nearby detections
 
+### Reinforcement Feedback Loop (New)
+
+User annotations now feed a reinforcement-style update pipeline that keeps the
+model aligned with the latest field feedback:
+
+- **Automatic Feedback Capture** – every saved annotation is persisted to a
+  JSONL dataset (`automatic-anamoly-detection/Model_Inference/feedback_dataset`).
+- **Training Queue** – the backend records a `ModelTrainingRun` entry and, when
+  enabled, automatically launches a background job.
+- **Python Update Script** – `update_model_from_feedback.py` aggregates the
+  dataset, snapshots metrics, copies the latest weights into a new
+  `model_versions/<tag>/` folder, embeds a short feedback summary inside the
+  checkpoint (when PyTorch is available), and updates `index.json` with a
+  changelog.
+- **Model Promotion** – on successful runs the freshly generated weights replace
+  the live inference checkpoint (`model_weights/model.ckpt`).
+- **Audit Trail for Clients** – the React admin view (`/model-training`) surfaces
+  run history, appended annotations/boxes, and class/action distributions so you
+  can demonstrate measurable model evolution to stakeholders.
+
 ## 🗄️ Database Architecture
 
 ### Database Schema (PostgreSQL on Neon)

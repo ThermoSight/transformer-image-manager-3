@@ -17,6 +17,7 @@ import InspectionList from "./components/InspectionList";
 import InspectionDetail from "./components/InspectionDetail";
 import InspectionUpload from "./components/InspectionUpload";
 import TransformerRecordDetail from "./components/TransformerRecordDetail";
+import ModelTrainingHistory from "./components/ModelTrainingHistory";
 import ProtectedRoute from "./ProtectedRoute";
 import MoodleNavbar from "./components/MoodleNavbar";
 import "./App.css";
@@ -38,6 +39,9 @@ function TitleHandler() {
         break;
       case "/upload-inspection":
         document.title = "Upload Inspection - ThermoSight TMS";
+        break;
+      case "/model-training":
+        document.title = "Model Feedback - ThermoSight TMS";
         break;
       case "/login":
         document.title = "Login - ThermoSight TMS";
@@ -140,6 +144,14 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <InspectionUpload />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/model-training"
+                element={
+                  <ProtectedRoute adminOnly>
+                    <ModelTrainingHistory />
                   </ProtectedRoute>
                 }
               />

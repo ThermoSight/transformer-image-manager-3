@@ -1,0 +1,18 @@
+{
+  "class_counts": {
+    "Point Overload (Potential)": 1,
+    "Point Overload (Faulty)": 1,
+    "Loose Joint (Faulty)": 1,
+    "Tiny Potential Spot": 1
+  },
+  "action_counts": {
+    "MODIFIED": 3,
+    "UNCHANGED": 1
+  },
+  "avg_box_area": 38160.5,
+  "min_box_area": 1224,
+  "max_box_area": 131400,
+  "avg_confidence": 0.6255,
+  "dataset_record_count": 1,
+  "box_count": 4
+}
