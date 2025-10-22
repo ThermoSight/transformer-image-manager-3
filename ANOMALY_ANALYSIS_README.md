@@ -57,6 +57,7 @@ Each detection includes:
 ## Configuration
 
 ### Application Properties
+> **Note:** Change "app.anomaly.model.path" and "app.anomaly.venv.path" according to your paths
 
 ```properties
 # Anomaly Analysis Configuration
@@ -135,7 +136,14 @@ CREATE TABLE analysis_jobs (
 2. **Analysis Fails**: Check WSL path configurations and venv setup
 3. **Queue Stuck**: Check logs for processing errors
 4. **File Not Found**: Verify upload directory permissions and paths
+5. **Maintinence picture upload error:**
+ > **Note:** Error: Analysis failed with exit code 127: /usr/bin/env: ‘bash\r’: No such file or directory
+/usr/bin/env: use [-v]S to pass options in shebang lines
 
+run in WSL terminal:
+```bash
+dos2unix /mnt/c/Users/HP/Desktop/Sem\ 7/Software\ Design\ Competition/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference/run_inference.sh
+```
 ### Logs
 
 Check Spring Boot logs for detailed error messages:
