@@ -42,3 +42,33 @@ The backend writes this into the annotation table so every edit is permanently s
 - The `ModelFeedbackService` periodically (or when requested) scans all annotations and compares each `originalResultJson` vs. `modifiedResultJson`, grouped by label.  
 - For every label (for example, *“Loose Joint”* or *“Point Overload”*), it computes three key deltas that quantify how humans corrected the model output.
 
+
+#### a. Count Change
+- Measures how many boxes humans added or deleted.  
+- A value of **+1** means the model missed one anomaly; **–1** means the model detected one incorrectly.
+
+
+#### b. Area Change
+- Measures how much the total annotated area grew or shrank.  
+- For example, **+0.4** means users drew larger boxes compared to the model’s predictions.  
+- Normalized so that small labels are not overshadowed by large ones.
+
+
+#### c. Confidence Change
+- Measures how humans adjusted the model’s confidence.  
+- Only considers the AI’s own detections; user-added boxes have no AI confidence value.  
+
+---
+
+1. It then blends these three using weights (typically 0.5, 0.3, 0.2) to produce a single adjustment signal per label.
+2. Scale by learningRate (e.g., 0.0001 = 0.01%)
+3. Accumulate into the stored per-label bias
+
+### 3. At inference response time, adjust each detection’s confidence for label
+This adjustment signal is:
+- clamped between –1 and +1,
+- scaled by the learningRate (e.g., 0.0001 = 0.01% influence),
+- capped to ±0.2 so it never shifts too aggressively.
+
+**Each label’s bias  is updated using an exponential moving average (EMA)**
+
