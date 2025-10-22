@@ -12,7 +12,7 @@ sudo apt install -y python3 python3-pip python3-venv git wget unzip dos2unix
 ### **2. Create and activate a virtual environment**
 
 ```bash
-cd /mnt/d/Semester_7/EN3350_SDC/SDP/Model_Inference/Model_Inference
+cd /mnt/path/to/your/automatic-anamoly-detection # add path to the automatic-anamoly-detection folder
 python3 -m venv .venv
 source .venv/bin/activate
 ```
