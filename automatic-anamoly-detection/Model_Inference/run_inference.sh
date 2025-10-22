@@ -24,6 +24,7 @@ CONFIG="config/patchcore_transformers.yaml"
 CKPT="model_weights/model.ckpt"
 SIZE=256
 SENSITIVITY=1.0
+FEEDBACK=""
 CPU=""
 INSTALL=0
 CLI_VENV=""
@@ -37,6 +38,7 @@ while [[ $# -gt 0 ]]; do
     --ckpt) CKPT="$2"; shift 2;;
     --size) SIZE="$2"; shift 2;;
     --sensitivity) SENSITIVITY="$2"; shift 2;;
+    --feedback) FEEDBACK="$2"; shift 2;;
     --cpu) CPU="--cpu"; shift;;
     --install) INSTALL=1; shift;;
     --venv) CLI_VENV="$2"; shift 2;;
@@ -80,6 +82,11 @@ fi
 echo "[INFO] Using venv: $VENV_PATH"
 echo "[INFO] Python: $(python --version)"
 echo "[INFO] Detection sensitivity: $SENSITIVITY"
+if [[ -n "$FEEDBACK" ]]; then
+  echo "[INFO] Feedback adjustments file: $FEEDBACK"
+else
+  echo "[INFO] Feedback adjustments file: <none>"
+fi
 echo "[INFO] Running inference_core_local.py"
 python inference_core_local.py \
   --config "$CONFIG" \
@@ -88,6 +95,7 @@ python inference_core_local.py \
   --outdir "$OUTDIR" \
   --size   "$SIZE" \
   --sensitivity "$SENSITIVITY" \
+  --feedback "$FEEDBACK" \
   $CPU
 
 echo "[DONE] Inference completed. Check '$OUTDIR' for results."

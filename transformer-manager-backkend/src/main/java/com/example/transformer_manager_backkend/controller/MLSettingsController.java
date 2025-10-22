@@ -2,12 +2,12 @@ package com.example.transformer_manager_backkend.controller;
 
 import com.example.transformer_manager_backkend.entity.MLSettings;
 import com.example.transformer_manager_backkend.service.MLSettingsService;
+import com.example.transformer_manager_backkend.service.ModelFeedbackService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 @RestController
@@ -16,9 +16,11 @@ import java.util.Optional;
 public class MLSettingsController {
 
     private final MLSettingsService mlSettingsService;
+    private final ModelFeedbackService modelFeedbackService;
 
-    public MLSettingsController(MLSettingsService mlSettingsService) {
+    public MLSettingsController(MLSettingsService mlSettingsService, ModelFeedbackService modelFeedbackService) {
         this.mlSettingsService = mlSettingsService;
+        this.modelFeedbackService = modelFeedbackService;
     }
 
     /**
@@ -44,6 +46,48 @@ public class MLSettingsController {
         mlSettingsService.setDetectionSensitivity(request.getSensitivity());
         double updatedSensitivity = mlSettingsService.getDetectionSensitivity();
         return ResponseEntity.ok(new SensitivityResponse(updatedSensitivity));
+    }
+
+    /**
+     * Get feedback learning rate
+     */
+    @GetMapping("/feedback-rate")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<FeedbackRateResponse> getFeedbackLearningRate() {
+        double rate = mlSettingsService.getFeedbackLearningRate();
+        return ResponseEntity.ok(new FeedbackRateResponse(rate));
+    }
+
+    /**
+     * Update feedback learning rate
+     */
+    @PutMapping("/feedback-rate")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<FeedbackRateResponse> setFeedbackLearningRate(@RequestBody FeedbackRateRequest request) {
+        if (request == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        double rate = request.getLearningRate();
+        if (rate < 0.00001 || rate > 0.05) {
+            return ResponseEntity.badRequest()
+                    .body(new FeedbackRateResponse(mlSettingsService.getFeedbackLearningRate(), "Learning rate must be between 0.00001 and 0.05"));
+        }
+
+        mlSettingsService.setFeedbackLearningRate(rate);
+        double updatedRate = mlSettingsService.getFeedbackLearningRate();
+        return ResponseEntity.ok(new FeedbackRateResponse(updatedRate));
+    }
+
+    /**
+     * Summarize feedback adjustments currently being applied
+     */
+    @GetMapping("/feedback-summary")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<FeedbackSummaryResponse> getFeedbackSummary() {
+        double learningRate = mlSettingsService.getFeedbackLearningRate();
+        ModelFeedbackService.FeedbackSummary summary = modelFeedbackService.generateFeedbackSummary(learningRate);
+        return ResponseEntity.ok(FeedbackSummaryResponse.from(summary));
     }
 
     /**
@@ -128,6 +172,141 @@ public class MLSettingsController {
         }
     }
 
+    public static class FeedbackRateRequest {
+        private double learningRate;
+
+        public double getLearningRate() {
+            return learningRate;
+        }
+
+        public void setLearningRate(double learningRate) {
+            this.learningRate = learningRate;
+        }
+    }
+
+    public static class FeedbackRateResponse {
+        private double learningRate;
+        private String description;
+        private String message;
+
+        public FeedbackRateResponse(double learningRate) {
+            this(learningRate, null);
+        }
+
+        public FeedbackRateResponse(double learningRate, String message) {
+            this.learningRate = learningRate;
+            this.message = message;
+            this.description = "Fraction applied to human annotation feedback when adjusting model confidence (0.00001-0.05).";
+        }
+
+        public double getLearningRate() {
+            return learningRate;
+        }
+
+        public void setLearningRate(double learningRate) {
+            this.learningRate = learningRate;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+
+        public void setDescription(String description) {
+            this.description = description;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public void setMessage(String message) {
+            this.message = message;
+        }
+    }
+
+    public static class FeedbackSummaryResponse {
+        private double learningRate;
+        private double globalAdjustment;
+        private int annotationSamples;
+        private String generatedAt;
+        private List<LabelFeedbackDTO> labels;
+
+        public static FeedbackSummaryResponse from(ModelFeedbackService.FeedbackSummary summary) {
+            FeedbackSummaryResponse response = new FeedbackSummaryResponse();
+            response.learningRate = summary.getLearningRate();
+            response.globalAdjustment = summary.getGlobalAdjustment();
+            response.annotationSamples = summary.getAnnotationSamples();
+            response.generatedAt = summary.getGeneratedAt().toString();
+            response.labels = summary.getLabelFeedback().stream()
+                    .map(LabelFeedbackDTO::from)
+                    .toList();
+            return response;
+        }
+
+        public double getLearningRate() {
+            return learningRate;
+        }
+
+        public double getGlobalAdjustment() {
+            return globalAdjustment;
+        }
+
+        public int getAnnotationSamples() {
+            return annotationSamples;
+        }
+
+        public String getGeneratedAt() {
+            return generatedAt;
+        }
+
+        public List<LabelFeedbackDTO> getLabels() {
+            return labels;
+        }
+    }
+
+    public static class LabelFeedbackDTO {
+        private String label;
+        private double avgCountDelta;
+        private double avgAreaRatio;
+        private double avgConfidenceDelta;
+        private double adjustment;
+        private int samples;
+
+        public static LabelFeedbackDTO from(ModelFeedbackService.LabelFeedback feedback) {
+            LabelFeedbackDTO dto = new LabelFeedbackDTO();
+            dto.label = feedback.getLabel();
+            dto.avgCountDelta = feedback.getAvgCountDelta();
+            dto.avgAreaRatio = feedback.getAvgAreaRatio();
+            dto.avgConfidenceDelta = feedback.getAvgConfidenceDelta();
+            dto.adjustment = feedback.getAdjustment();
+            dto.samples = feedback.getSamples();
+            return dto;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public double getAvgCountDelta() {
+            return avgCountDelta;
+        }
+
+        public double getAvgAreaRatio() {
+            return avgAreaRatio;
+        }
+
+        public double getAvgConfidenceDelta() {
+            return avgConfidenceDelta;
+        }
+
+        public double getAdjustment() {
+            return adjustment;
+        }
+
+        public int getSamples() {
+            return samples;
+        }
+    }
     public static class SettingRequest {
         private String value;
         private String description;

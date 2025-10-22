@@ -17,9 +17,11 @@ public class MLSettingsService {
 
     // Setting keys
     public static final String DETECTION_SENSITIVITY = "detection_sensitivity";
+    public static final String FEEDBACK_LEARNING_RATE = "feedback_learning_rate";
 
     // Default values
     public static final double DEFAULT_SENSITIVITY = 1.0;
+    public static final double DEFAULT_FEEDBACK_LEARNING_RATE = 0.0001; // 0.01%
 
     private final MLSettingsRepository mlSettingsRepository;
 
@@ -33,14 +35,15 @@ public class MLSettingsService {
      */
     @Transactional
     public void initializeDefaultSettings() {
-        if (!mlSettingsRepository.existsBySettingKey(DETECTION_SENSITIVITY)) {
-            MLSettings sensitivity = new MLSettings(
-                    DETECTION_SENSITIVITY,
-                    String.valueOf(DEFAULT_SENSITIVITY),
-                    "ML detection sensitivity (0.1-2.0). Higher values = more sensitive detection = more boxes detected.");
-            mlSettingsRepository.save(sensitivity);
-            logger.info("Initialized default detection sensitivity: {}", DEFAULT_SENSITIVITY);
-        }
+        initializeSettingIfMissing(
+                DETECTION_SENSITIVITY,
+                String.valueOf(DEFAULT_SENSITIVITY),
+                "ML detection sensitivity (0.1-2.0). Higher values = more sensitive detection = more boxes detected.");
+
+        initializeSettingIfMissing(
+                FEEDBACK_LEARNING_RATE,
+                String.valueOf(DEFAULT_FEEDBACK_LEARNING_RATE),
+                "Fractional learning rate for incorporating human annotation feedback into model confidence (0.00001-0.05).");
     }
 
     /**
@@ -52,7 +55,7 @@ public class MLSettingsService {
             try {
                 double value = Double.parseDouble(setting.get().getSettingValue());
                 // Clamp to valid range
-                return Math.max(0.1, Math.min(2.0, value));
+                return clamp(value, 0.1, 2.0);
             } catch (NumberFormatException e) {
                 logger.warn("Invalid sensitivity value: {}, using default", setting.get().getSettingValue());
                 return DEFAULT_SENSITIVITY;
@@ -62,27 +65,47 @@ public class MLSettingsService {
     }
 
     /**
+     * Get feedback learning rate
+     */
+    public double getFeedbackLearningRate() {
+        Optional<MLSettings> setting = mlSettingsRepository.findBySettingKey(FEEDBACK_LEARNING_RATE);
+        if (setting.isPresent()) {
+            try {
+                double value = Double.parseDouble(setting.get().getSettingValue());
+                return clamp(value, 0.00001, 0.05);
+            } catch (NumberFormatException e) {
+                logger.warn("Invalid feedback learning rate: {}, using default", setting.get().getSettingValue());
+                return DEFAULT_FEEDBACK_LEARNING_RATE;
+            }
+        }
+        return DEFAULT_FEEDBACK_LEARNING_RATE;
+    }
+
+    /**
      * Set detection sensitivity
      */
     @Transactional
     public void setDetectionSensitivity(double sensitivity) {
         // Clamp to valid range
-        sensitivity = Math.max(0.1, Math.min(2.0, sensitivity));
+        double clamped = clamp(sensitivity, 0.1, 2.0);
+        upsertSetting(
+                DETECTION_SENSITIVITY,
+                String.valueOf(clamped),
+                "ML detection sensitivity (0.1-2.0). Higher values = more sensitive detection = more boxes detected.");
+        logger.info("Updated detection sensitivity to: {}", clamped);
+    }
 
-        Optional<MLSettings> existingSetting = mlSettingsRepository.findBySettingKey(DETECTION_SENSITIVITY);
-        if (existingSetting.isPresent()) {
-            MLSettings setting = existingSetting.get();
-            setting.setSettingValue(String.valueOf(sensitivity));
-            mlSettingsRepository.save(setting);
-        } else {
-            MLSettings setting = new MLSettings(
-                    DETECTION_SENSITIVITY,
-                    String.valueOf(sensitivity),
-                    "ML detection sensitivity (0.1-2.0). Higher values = more sensitive detection = more boxes detected.");
-            mlSettingsRepository.save(setting);
-        }
-
-        logger.info("Updated detection sensitivity to: {}", sensitivity);
+    /**
+     * Set feedback learning rate
+     */
+    @Transactional
+    public void setFeedbackLearningRate(double learningRate) {
+        double clamped = clamp(learningRate, 0.00001, 0.05);
+        upsertSetting(
+                FEEDBACK_LEARNING_RATE,
+                String.valueOf(clamped),
+                "Fractional learning rate for incorporating human annotation feedback into model confidence (0.00001-0.05).");
+        logger.info("Updated feedback learning rate to: {}", clamped);
     }
 
     /**
@@ -132,5 +155,32 @@ public class MLSettingsService {
             return true;
         }
         return false;
+    }
+
+    private void initializeSettingIfMissing(String key, String value, String description) {
+        if (!mlSettingsRepository.existsBySettingKey(key)) {
+            MLSettings setting = new MLSettings(key, value, description);
+            mlSettingsRepository.save(setting);
+            logger.info("Initialized default setting {}: {}", key, value);
+        }
+    }
+
+    private void upsertSetting(String key, String value, String description) {
+        Optional<MLSettings> existingSetting = mlSettingsRepository.findBySettingKey(key);
+        if (existingSetting.isPresent()) {
+            MLSettings setting = existingSetting.get();
+            setting.setSettingValue(value);
+            if (description != null) {
+                setting.setDescription(description);
+            }
+            mlSettingsRepository.save(setting);
+        } else {
+            MLSettings setting = new MLSettings(key, value, description);
+            mlSettingsRepository.save(setting);
+        }
+    }
+
+    private double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 }

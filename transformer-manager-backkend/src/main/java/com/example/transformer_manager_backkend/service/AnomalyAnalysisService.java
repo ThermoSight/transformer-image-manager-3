@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -36,6 +37,7 @@ public class AnomalyAnalysisService {
     private final AnalysisJobRepository analysisJobRepository;
     private final ImageRepository imageRepository;
     private final MLSettingsService mlSettingsService;
+    private final ModelFeedbackService modelFeedbackService;
     private final ObjectMapper objectMapper;
     private final ExecutorService executorService;
 
@@ -49,10 +51,11 @@ public class AnomalyAnalysisService {
     private String tempDir;
 
     public AnomalyAnalysisService(AnalysisJobRepository analysisJobRepository, ImageRepository imageRepository,
-            MLSettingsService mlSettingsService) {
+            MLSettingsService mlSettingsService, ModelFeedbackService modelFeedbackService) {
         this.analysisJobRepository = analysisJobRepository;
         this.imageRepository = imageRepository;
         this.mlSettingsService = mlSettingsService;
+        this.modelFeedbackService = modelFeedbackService;
         this.objectMapper = new ObjectMapper();
         this.executorService = Executors.newSingleThreadExecutor();
 
@@ -257,25 +260,50 @@ public class AnomalyAnalysisService {
         String wslInputDir = projectRootWSL + "/" + relativeInputDir.toString().replace('\\', '/');
         String wslOutputDir = projectRootWSL + "/" + relativeOutputDir.toString().replace('\\', '/');
 
-        // Get current sensitivity setting
+        // Load current ML tuning knobs
         double sensitivity = mlSettingsService.getDetectionSensitivity();
+        double learningRate = mlSettingsService.getFeedbackLearningRate();
+        ModelFeedbackService.FeedbackPayload feedbackPayload = modelFeedbackService.buildFeedbackPayload(learningRate);
+        ModelFeedbackService.FeedbackSummary feedbackSummary = feedbackPayload.getSummary();
 
-        // Prepare WSL command with sensitivity
-        String wslCommand = String.format(
-                "wsl --cd \"/mnt/f/github/transformer-image-manager-2/automatic-anamoly-detection/Model_Inference\" -- ./run_inference.sh --venv \"%s\" --input \"%s\" --outdir \"%s\" --sensitivity %.2f",
-                venvPath,
-                wslInputDir,
-                wslOutputDir,
-                sensitivity);
+        Path feedbackFile = tempJobPath.resolve("feedback_adjustments.json");
+        Files.writeString(feedbackFile, feedbackPayload.toJsonString(), StandardCharsets.UTF_8);
+        Path relativeFeedbackPath = currentDir.relativize(feedbackFile.toAbsolutePath());
+        String wslFeedbackPath = projectRootWSL + "/" + relativeFeedbackPath.toString().replace('\\', '/');
 
-        logger.info("Running WSL command: {}", wslCommand);
+
         logger.info("Using detection sensitivity: {}", sensitivity);
+        logger.info("Feedback learning rate: {}", learningRate);
+        logger.info("Feedback adjustment global bias: {}", feedbackSummary.getGlobalAdjustment());
+        if (feedbackPayload.hasAdjustments()) {
+            logger.info("Applying {} label adjustments from feedback", feedbackSummary.getLabelFeedback().size());
+            feedbackSummary.getLabelFeedback().stream().limit(3).forEach(f ->
+                    logger.info("  -> {}: adj={}, countΔ={}, areaRatio={}, confΔ={}",
+                            f.getLabel(),
+                            f.getAdjustment(),
+                            f.getAvgCountDelta(),
+                            f.getAvgAreaRatio(),
+                            f.getAvgConfidenceDelta()));
+        } else {
+            logger.info("No user feedback adjustments available yet.");
+        }
         logger.info("Project root (Windows): {}", currentDir);
         logger.info("Project root (WSL): {}", projectRootWSL);
         logger.info("Input directory (Windows): {}", inputDir.toAbsolutePath());
         logger.info("Input directory (WSL): {}", wslInputDir);
         logger.info("Output directory (Windows): {}", outputDir.toAbsolutePath());
         logger.info("Output directory (WSL): {}", wslOutputDir);
+        logger.info("Feedback payload (WSL path): {}", wslFeedbackPath);
+
+        // Prepare WSL command with sensitivity and feedback adjustments
+        String wslCommand = String.format(
+                "wsl --cd \"/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/Model_Inference\" -- ./run_inference.sh --venv \"%s\" --input \"%s\" --outdir \"%s\" --sensitivity %.2f --feedback \"%s\"",
+                venvPath,
+                wslInputDir,
+                wslOutputDir,
+                sensitivity,
+                wslFeedbackPath);
+        logger.info("Running WSL command: {}", wslCommand);
 
         // Execute the command
         ProcessBuilder processBuilder = new ProcessBuilder("cmd", "/c", wslCommand);

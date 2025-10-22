@@ -27,6 +27,14 @@ const SensitivityIndicator = () => {
 
   const sensitivity = settings.detectionSensitivity;
   const { level, color, icon } = getSensitivityLevel(sensitivity);
+  const feedbackRate = settings.feedbackLearningRate;
+  const feedbackSummary = settings.feedbackSummary;
+  const formatSmallNumber = (value, digits = 6) => {
+    if (typeof value !== "number" || Number.isNaN(value)) {
+      return "-";
+    }
+    return value.toFixed(digits);
+  };
 
   if (settings.loading) {
     return (
@@ -71,6 +79,22 @@ const SensitivityIndicator = () => {
               : sensitivity > 1.0
               ? "Sensitive detection - more boxes, may include minor anomalies"
               : "Balanced detection - recommended for most cases"}
+          </div>
+          <div className="small text-muted">
+            Feedback learning rate: {formatSmallNumber(feedbackRate, 5)}
+            {feedbackSummary?.annotationSamples > 0 && (
+              <>
+                {" "}| Global bias{" "}
+                {formatSmallNumber(feedbackSummary.globalAdjustment)}
+              </>
+            )}
+          </div>
+          <div className="small text-muted">
+            {feedbackSummary?.annotationSamples > 0
+              ? `Grounded in ${feedbackSummary.annotationSamples} annotated result${
+                  feedbackSummary.annotationSamples === 1 ? "" : "s"
+                }.`
+              : "Awaiting user feedback to calibrate confidences."}
           </div>
         </Card.Body>
       </Card>
