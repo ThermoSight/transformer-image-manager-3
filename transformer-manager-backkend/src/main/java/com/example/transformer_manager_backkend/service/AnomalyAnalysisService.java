@@ -1,17 +1,5 @@
 package com.example.transformer_manager_backkend.service;
 
-import com.example.transformer_manager_backkend.entity.AnalysisJob;
-import com.example.transformer_manager_backkend.entity.Image;
-import com.example.transformer_manager_backkend.repository.AnalysisJobRepository;
-import com.example.transformer_manager_backkend.repository.ImageRepository;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -27,6 +15,19 @@ import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.example.transformer_manager_backkend.entity.AnalysisJob;
+import com.example.transformer_manager_backkend.entity.Image;
+import com.example.transformer_manager_backkend.repository.AnalysisJobRepository;
+import com.example.transformer_manager_backkend.repository.ImageRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class AnomalyAnalysisService {
@@ -269,6 +270,7 @@ public class AnomalyAnalysisService {
         Files.writeString(feedbackFile, feedbackPayload.toJsonString(), StandardCharsets.UTF_8);
         Path relativeFeedbackPath = currentDir.relativize(feedbackFile.toAbsolutePath());
         String wslFeedbackPath = projectRootWSL + "/" + relativeFeedbackPath.toString().replace('\\', '/');
+
 
         logger.info("Using detection sensitivity: {}", sensitivity);
         logger.info("Feedback learning rate: {}", learningRate);

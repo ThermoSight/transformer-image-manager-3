@@ -1,0 +1,49 @@
+{
+  "image": "/mnt/f/github/transformer-image-manager-3/transformer-manager-backkend/temp/anomaly-analysis/job_26_1760989588756/input/1760989584468_T1_faulty_030.jpg",
+  "boxed_image": "/mnt/f/github/transformer-image-manager-3/transformer-manager-backkend/temp/anomaly-analysis/job_26_1760989588756/output/boxed/1760989584468_T1_faulty_030_boxed.jpg",
+  "mask_image": "/mnt/f/github/transformer-image-manager-3/transformer-manager-backkend/temp/anomaly-analysis/job_26_1760989588756/output/masks/1760989584468_T1_faulty_030_mask.png",
+  "filtered_image": "/mnt/f/github/transformer-image-manager-3/transformer-manager-backkend/temp/anomaly-analysis/job_26_1760989588756/output/filtered/1760989584468_T1_faulty_030_filtered.png",
+  "label": "Normal",
+  "boxes": [
+    {
+      "box": [
+        249,
+        266,
+        54,
+        51
+      ],
+      "type": "Point Overload (Potential)",
+      "confidence": 0.598
+    },
+    {
+      "box": [
+        369,
+        286,
+        13,
+        18
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.741
+    },
+    {
+      "box": [
+        355,
+        288,
+        7,
+        17
+      ],
+      "type": "Tiny Faulty Spot",
+      "confidence": 0.523
+    },
+    {
+      "box": [
+        505,
+        336,
+        4,
+        7
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.672
+    }
+  ]
+}

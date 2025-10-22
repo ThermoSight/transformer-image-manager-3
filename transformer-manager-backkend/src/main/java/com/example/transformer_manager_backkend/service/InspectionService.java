@@ -1,26 +1,33 @@
 package com.example.transformer_manager_backkend.service;
 
-import com.example.transformer_manager_backkend.entity.Admin;
-import com.example.transformer_manager_backkend.entity.User;
-import com.example.transformer_manager_backkend.entity.Image;
-import com.example.transformer_manager_backkend.entity.Inspection;
-import com.example.transformer_manager_backkend.entity.TransformerRecord;
-import com.example.transformer_manager_backkend.repository.InspectionRepository;
-import com.example.transformer_manager_backkend.repository.TransformerRecordRepository;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-import com.example.transformer_manager_backkend.repository.ImageRepository;
-
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.example.transformer_manager_backkend.entity.Admin;
+import com.example.transformer_manager_backkend.entity.Image;
+import com.example.transformer_manager_backkend.entity.Inspection;
+import com.example.transformer_manager_backkend.entity.TransformerRecord;
+import com.example.transformer_manager_backkend.entity.User;
+import com.example.transformer_manager_backkend.repository.ImageRepository;
+import com.example.transformer_manager_backkend.repository.InspectionRepository;
+import com.example.transformer_manager_backkend.repository.TransformerRecordRepository;
 
 @Service
 public class InspectionService {
+
+    private static final Logger logger = LoggerFactory.getLogger(InspectionService.class);
 
     private final InspectionRepository inspectionRepository;
     private final TransformerRecordRepository transformerRecordRepository;
@@ -59,7 +66,7 @@ public class InspectionService {
         List<Image> imageEntities = createImageEntities(maintenanceImages, inspection);
         inspection.setImages(imageEntities);
 
-        Inspection savedInspection = inspectionRepository.save(inspection);
+        Inspection savedInspection = inspectionRepository.saveAndFlush(inspection);
 
         // Queue maintenance images for anomaly analysis after saving
         for (Image image : savedInspection.getImages()) {
@@ -67,6 +74,9 @@ public class InspectionService {
                 anomalyAnalysisService.queueImageForAnalysis(image);
             }
         }
+
+        // Ensure images are initialized for serialization
+        savedInspection.getImages().size();
 
         return savedInspection;
     }
@@ -99,7 +109,7 @@ public class InspectionService {
         List<Image> imageEntities = createImageEntities(maintenanceImages, inspection);
         inspection.setImages(imageEntities);
 
-        Inspection savedInspection = inspectionRepository.save(inspection);
+        Inspection savedInspection = inspectionRepository.saveAndFlush(inspection);
 
         // Queue maintenance images for anomaly analysis after saving
         for (Image image : savedInspection.getImages()) {
@@ -107,6 +117,8 @@ public class InspectionService {
                 anomalyAnalysisService.queueImageForAnalysis(image);
             }
         }
+
+        savedInspection.getImages().size();
 
         return savedInspection;
     }
@@ -165,6 +177,7 @@ public class InspectionService {
         inspectionRepository.deleteById(id);
     }
 
+    @Transactional
     public Inspection addImagesToInspection(Long inspectionId, List<MultipartFile> newImages, Admin admin)
             throws IOException {
         Inspection inspection = inspectionRepository.findById(inspectionId)
@@ -181,18 +194,36 @@ public class InspectionService {
         existingImages.addAll(additionalImageEntities);
         inspection.setImages(existingImages);
 
-        Inspection savedInspection = inspectionRepository.save(inspection);
+        Inspection savedInspection = inspectionRepository.saveAndFlush(inspection);
 
-        // Queue new maintenance images for anomaly analysis
+        // Queue new maintenance images for anomaly analysis without breaking the upload flow
         for (Image image : additionalImageEntities) {
             if ("Maintenance".equalsIgnoreCase(image.getType())) {
-                anomalyAnalysisService.queueImageForAnalysis(image);
+                try {
+                    Image imageToQueue = image;
+                    if (imageToQueue.getId() == null) {
+                        Optional<Image> persisted = imageRepository.findByFilePath(image.getFilePath());
+                        if (persisted.isPresent()) {
+                            imageToQueue = persisted.get();
+                        }
+                    }
+                    if (imageToQueue.getId() != null) {
+                        anomalyAnalysisService.queueImageForAnalysis(imageToQueue);
+                    } else {
+                        logger.warn("Skipping anomaly queue for image with file {} because it has no ID", image.getFilePath());
+                    }
+                } catch (Exception queueError) {
+                    logger.error("Failed to queue image {} for anomaly analysis", image.getId(), queueError);
+                }
             }
         }
+
+        savedInspection.getImages().size();
 
         return savedInspection;
     }
 
+    @Transactional
     public Inspection addImagesToInspection(Long inspectionId, List<MultipartFile> newImages, User user)
             throws IOException {
         Inspection inspection = inspectionRepository.findById(inspectionId)
@@ -214,14 +245,31 @@ public class InspectionService {
         existingImages.addAll(additionalImageEntities);
         inspection.setImages(existingImages);
 
-        Inspection savedInspection = inspectionRepository.save(inspection);
+        Inspection savedInspection = inspectionRepository.saveAndFlush(inspection);
 
-        // Queue new maintenance images for anomaly analysis
+        // Queue new maintenance images for anomaly analysis without failing the request
         for (Image image : additionalImageEntities) {
             if ("Maintenance".equalsIgnoreCase(image.getType())) {
-                anomalyAnalysisService.queueImageForAnalysis(image);
+                try {
+                    Image imageToQueue = image;
+                    if (imageToQueue.getId() == null) {
+                        Optional<Image> persisted = imageRepository.findByFilePath(image.getFilePath());
+                        if (persisted.isPresent()) {
+                            imageToQueue = persisted.get();
+                        }
+                    }
+                    if (imageToQueue.getId() != null) {
+                        anomalyAnalysisService.queueImageForAnalysis(imageToQueue);
+                    } else {
+                        logger.warn("Skipping anomaly queue for image with file {} because it has no ID", image.getFilePath());
+                    }
+                } catch (Exception queueError) {
+                    logger.error("Failed to queue image {} for anomaly analysis", image.getId(), queueError);
+                }
             }
         }
+
+        savedInspection.getImages().size();
 
         return savedInspection;
     }

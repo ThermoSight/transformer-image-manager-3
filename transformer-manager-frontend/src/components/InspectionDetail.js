@@ -244,17 +244,25 @@ const InspectionDetail = () => {
         config
       );
 
+      setUploadError("");
       setUploadSuccess(`${validImages.length} image(s) uploaded successfully!`);
 
-      // Refresh inspection data to show new images
-      const response = await axios.get(
-        `http://localhost:8080/api/inspections/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-          withCredentials: true,
-        }
-      );
-      setInspection(response.data);
+      // Refresh inspection data to show new images; falling back to manual reload if it fails.
+      try {
+        const response = await axios.get(
+          `http://localhost:8080/api/inspections/${id}`,
+          {
+            headers: { Authorization: `Bearer ${token}` },
+            withCredentials: true,
+          }
+        );
+        setInspection(response.data);
+      } catch (refreshError) {
+        console.error("Inspection refresh failed after upload", refreshError);
+        setUploadError(
+          "Images uploaded, but failed to refresh inspection details automatically. Please refresh the page."
+        );
+      }
 
       // Reset form
       setNewImages([]);
