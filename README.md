@@ -77,6 +77,224 @@ The system analyzes filtered images using HSV color analysis to classify specifi
   - Confidence score calculations
   - Merge distance for nearby detections
 
+## 📝 Interactive Annotation System
+
+The ThermoSight system includes a sophisticated annotation system that allows users to interactively edit, validate, and improve ML-generated anomaly detections. This system serves both quality assurance and model training data generation purposes.
+
+### 🎯 Core Components
+
+#### 1. Interactive Annotation Editor (`InteractiveAnnotationEditor.js`)
+
+A full-featured visual editor built with HTML5 Canvas that provides:
+
+- **Canvas-based Drawing Interface**: Direct manipulation of bounding boxes on thermal images
+- **Multi-mode Interaction**: Create new annotations, edit existing ones, or delete unwanted detections
+- **Real-time Visual Feedback**: Immediate updates as users modify annotations
+- **Fullscreen Support**: Expandable interface for detailed annotation work
+
+#### 2. Annotation Data Management
+
+**Backend Entity Structure** (`Annotation.java`):
+```java
+// Core annotation tracking
+- originalResultJson: AI-generated detections (immutable)
+- modifiedResultJson: User-edited version (versioned)
+- annotationBoxes: Individual bounding box data
+- annotationType: ADDED, EDITED, DELETED, VALIDATED
+- comments: User feedback and notes
+- annotatedByUser/Admin: Attribution tracking
+```
+
+**Database Schema**:
+- `annotations` table: Main annotation records with versioning
+- `annotation_boxes` table: Individual bounding box coordinates and metadata
+- Foreign key relationships to `analysis_jobs` and `users`/`admins`
+
+### 🔧 How to Use the Annotation System
+
+#### Step 1: Access the Annotation Editor
+
+1. **Complete ML Analysis**: Upload a thermal image and run anomaly detection
+2. **View Results**: Once analysis completes, you'll see detected anomalies with bounding boxes
+3. **Open Editor**: Click the **"Edit Annotations"** button on any completed analysis result
+4. The Interactive Annotation Editor modal will open showing the analyzed image
+
+#### Step 2: Understanding the Interface
+
+**Main Areas**:
+- **Canvas Area**: Displays the thermal image with overlay annotations
+- **Toolbar**: Contains drawing tools, undo/redo, and annotation type selector
+- **Properties Panel**: Shows details of selected annotations and overall statistics
+- **Status Indicators**: Color-coded badges showing AI-generated vs user-added annotations
+
+**Visual Indicators**:
+- 🔴 **Red boxes**: AI-generated anomaly detections
+- 🟢 **Green boxes**: User-added annotations
+- 🟡 **Yellow boxes**: Potential (warning-level) anomalies
+- ⚪ **White border**: Currently selected annotation
+
+#### Step 3: Editing Annotations
+
+**Creating New Annotations**:
+1. Select annotation type from toolbar dropdown (e.g., "Loose Joint (Faulty)")
+2. Click and drag on the image to draw a new bounding box
+3. The new annotation appears immediately with a green border
+
+**Modifying Existing Annotations**:
+1. Click on any existing bounding box to select it
+2. **Move**: Click and drag the box to reposition
+3. **Resize**: Use corner handles to adjust box dimensions
+4. **Change Type**: Use the "Change Type" dropdown to reclassify the anomaly
+5. **Add Comments**: Use the properties panel to add notes about the annotation
+
+**Deleting Annotations**:
+1. Select the unwanted annotation by clicking on it
+2. Click the trash icon (🗑️) in the toolbar
+3. The annotation is immediately removed
+
+#### Step 4: Advanced Features
+
+**Undo/Redo Operations**:
+- Use undo (↶) and redo (↷) buttons to reverse recent changes
+- Full history tracking maintains all editing steps
+
+**Annotation Types Available**:
+- **Loose Joint (Faulty)**: Critical connection heating
+- **Point Overload (Faulty)**: Severe localized overheating  
+- **Full Wire Overload (Faulty)**: Extensive wire heating
+- **Tiny Faulty Spot**: Small critical hotspots
+- **Tiny Potential Spot**: Minor warning areas
+- **Custom Anomaly**: User-defined categories
+
+**Comments System**:
+- **Per-Box Comments**: Add specific notes to individual annotations
+- **Overall Comments**: General observations about the entire analysis
+- Comments are preserved and exported with annotation data
+
+#### Step 5: Saving and Exporting
+
+**Save Annotations**:
+1. Click **"Save Annotations"** to persist all changes
+2. The system updates both the database and the displayed image
+3. Success confirmation appears before auto-closing the editor
+
+**Export Options**:
+- **JSON Report**: Complete annotation data with coordinates and metadata
+- **Training Data**: Formatted for ML model retraining
+- **Audit Trail**: Full history of changes with timestamps and user attribution
+
+### 🔄 Integration with ML Pipeline
+
+#### Model Feedback Loop
+
+**Data Collection**:
+- User modifications are tracked as feedback signals
+- **Model Feedback Service** (`ModelFeedbackService.java`) analyzes annotation patterns
+- Confidence adjustments calculated based on user corrections
+
+**Feedback Application**:
+```java
+// Example feedback structure
+{
+  "global_adjustment": -0.023,
+  "learning_rate": 0.001,
+  "per_box": [
+    {
+      "label": "Point Overload (Faulty)",
+      "original_confidence": 0.85,
+      "adjusted_confidence": 0.78,
+      "adjustment": -0.07
+    }
+  ]
+}
+```
+
+**Continuous Learning**:
+- User corrections influence future detection sensitivity
+- Popular annotation patterns improve model accuracy
+- Feedback accumulates across all user interactions
+
+#### Quality Assurance Workflow
+
+1. **Initial Detection**: AI generates preliminary anomaly detections
+2. **Human Review**: Expert users validate and correct annotations  
+3. **Feedback Integration**: Corrections influence model parameters
+4. **Improved Accuracy**: Subsequent analyses benefit from accumulated feedback
+5. **Export Training Data**: Validated annotations can retrain the base model
+
+### 📊 Annotation Analytics
+
+**Real-time Statistics**:
+- Total annotations count (AI + user-added)
+- Breakdown by annotation type and confidence levels
+- User activity tracking and contribution metrics
+
+**Data Export Formats**:
+
+**Standard JSON Export**:
+```json
+{
+  "analysis_job_id": 123,
+  "original_detections": [...],
+  "user_modifications": [...],
+  "final_annotations": [
+    {
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.89,
+      "coordinates": {"x": 150, "y": 200, "width": 45, "height": 30},
+      "source": "AI_GENERATED",
+      "modified": false,
+      "comments": "Confirmed critical hotspot"
+    }
+  ],
+  "metadata": {
+    "annotated_by": "expert_user",
+    "timestamp": "2025-10-22T10:30:00Z",
+    "total_time_spent": "00:05:30"
+  }
+}
+```
+
+### 🔐 Security and Permissions
+
+**Access Control**:
+- **Authenticated Users**: Can edit their own inspection annotations
+- **Admin Users**: Full access to all annotations across the system
+- **Guest Access**: View-only mode for demonstration purposes
+
+**Data Integrity**:
+- **Version Control**: All annotation changes are versioned and tracked
+- **Audit Trail**: Complete history of who changed what and when
+- **Rollback Capability**: Ability to revert to previous annotation states
+- **Optimistic Locking**: Prevents concurrent edit conflicts
+
+### 🎓 Best Practices for Annotation
+
+#### For Quality Annotations
+
+1. **Be Consistent**: Use the same criteria for similar anomalies across images
+2. **Precise Boundaries**: Draw tight bounding boxes around actual thermal anomalies
+3. **Appropriate Types**: Choose the most specific anomaly category available
+4. **Add Context**: Use comments to explain unusual or borderline cases
+5. **Review AI Suggestions**: Validate AI detections rather than starting from scratch
+
+#### For Training Data Generation
+
+1. **Complete Coverage**: Ensure all visible anomalies are annotated
+2. **Negative Examples**: Mark areas that look suspicious but are actually normal
+3. **Edge Cases**: Pay special attention to unusual or rare anomaly presentations
+4. **Confidence Calibration**: Adjust AI confidence scores based on actual severity
+5. **Balanced Dataset**: Include diverse anomaly types and severities
+
+### 🚀 Future Enhancements
+
+**Planned Features**:
+- **Collaborative Annotation**: Multiple users working on the same image simultaneously
+- **AI Suggestion Refinement**: More sophisticated active learning integration
+- **Custom Annotation Types**: User-defined anomaly categories for specialized use cases
+- **Batch Processing**: Apply annotations across multiple similar images
+- **Quality Metrics**: Automated scoring of annotation completeness and accuracy
+
 ## 🗄️ Database Architecture
 
 ### Database Schema (PostgreSQL on Neon)
@@ -142,6 +360,8 @@ transformer-image-manager-2/
 │   ├── src/
 │   │   ├── components/                    # React Components
 │   │   │   ├── InspectionUpload.js       # Image upload interface
+│   │   │   ├── AnalysisDisplay.js        # ML results viewer with annotation access
+│   │   │   ├── InteractiveAnnotationEditor.js # Canvas-based annotation editor
 │   │   │   ├── MLSensitivityIndicator.js # Real-time sensitivity display
 │   │   │   ├── SettingsModal.js          # ML settings configuration
 │   │   │   └── MoodleNavbar.js           # Navigation with ML settings
@@ -153,15 +373,22 @@ transformer-image-manager-2/
 ├── transformer-manager-backkend/          # Spring Boot Backend
 │   ├── src/main/java/com/example/transformer_manager_backkend/
 │   │   ├── controller/                   # REST Controllers
+│   │   │   ├── AnnotationController.java # Annotation CRUD and export APIs
 │   │   │   ├── AnomalyAnalysisController.java
 │   │   │   └── MLSettingsController.java # ML configuration API
 │   │   ├── service/                      # Business Logic
+│   │   │   ├── AnnotationService.java    # Annotation management logic
+│   │   │   ├── ModelFeedbackService.java # ML feedback integration
 │   │   │   ├── AnomalyAnalysisService.java # ML pipeline orchestration
 │   │   │   └── MLSettingsService.java    # Persistent ML settings
 │   │   ├── entity/                       # JPA Entities
+│   │   │   ├── Annotation.java          # Main annotation record
+│   │   │   ├── AnnotationBox.java       # Individual bounding box data
 │   │   │   ├── AnalysisJob.java         # ML processing queue
 │   │   │   └── MLSettings.java          # ML configuration storage
 │   │   └── repository/                   # Data Access Layer
+│   │       ├── AnnotationRepository.java # Annotation data access
+│   │       └── AnnotationBoxRepository.java # Bounding box operations
 │   └── pom.xml                          # Maven dependencies
 │
 ├── automatic-anamoly-detection/           # ML Engine
@@ -177,6 +404,7 @@ transformer-image-manager-2/
 ├── uploads/                             # File storage
 │   └── analysis/                        # Processed images with bounding boxes
 └── temp/                               # Temporary processing workspace
+    └── anomaly-analysis/               # Annotation session workspaces
 ```
 
 ## 🚀 Setup Instructions
@@ -275,6 +503,7 @@ ls automatic-anamoly-detection/Model_Inference/config/patchcore_transformers.yam
 - **Visual result overlay** on original images
 - **JSON export** for integration with other systems
 
+
 ## 🔒 Security & Performance
 
 ### Authentication
@@ -308,6 +537,57 @@ ls automatic-anamoly-detection/Model_Inference/config/patchcore_transformers.yam
 - **Real-time status tracking** for ML jobs
 - **Position-based queue ordering**
 - **Failure recovery** with error messaging
+
+## 📚 Quick Reference
+
+### Annotation System API Endpoints
+
+```bash
+# Get or create annotation for analysis job
+GET /api/annotations/analysis-job/{analysisJobId}
+
+# Update annotation with user edits
+PUT /api/annotations/{annotationId}
+Body: {
+  "boxes": [
+    {
+      "x": 150, "y": 200, "width": 45, "height": 30,
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.89,
+      "action": "MODIFIED",
+      "comments": "Confirmed critical hotspot"
+    }
+  ],
+  "comments": "Overall inspection notes"
+}
+
+# Export annotation report as JSON
+GET /api/annotations/analysis-job/{analysisJobId}/export
+
+# Get all annotations for an inspection
+GET /api/annotations/inspection/{inspectionId}
+
+# Export feedback log (Admin only)
+GET /api/annotations/feedback-log/export
+```
+
+### Annotation Keyboard Shortcuts
+
+- **Ctrl+Z**: Undo last action
+- **Ctrl+Y**: Redo last action  
+- **Delete**: Remove selected annotation
+- **Escape**: Deselect current annotation
+- **F11**: Toggle fullscreen mode
+
+### Color Code Reference
+
+- 🔴 **Red**: AI-generated critical anomalies
+- 🟡 **Yellow**: AI-generated potential issues
+- 🟢 **Green**: User-added annotations
+- ⚪ **White border**: Currently selected annotation
+- 🔵 **Blue handles**: Resize control points
+
+---
 
 ## ⚠️ Known Limitations
 
