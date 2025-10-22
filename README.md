@@ -255,45 +255,53 @@ A full-featured visual editor built with HTML5 Canvas that provides:
 }
 ```
 
-### 🔐 Security and Permissions
+## Overview of Feedback Integration 
 
-**Access Control**:
-- **Authenticated Users**: Can edit their own inspection annotations
-- **Admin Users**: Full access to all annotations across the system
-- **Guest Access**: View-only mode for demonstration purposes
+This module captures every annotation, compares it to the model output, and applies small, explainable confidence adjustments per fault label.
 
-**Data Integrity**:
-- **Version Control**: All annotation changes are versioned and tracked
-- **Audit Trail**: Complete history of who changed what and when
-- **Rollback Capability**: Ability to revert to previous annotation states
-- **Optimistic Locking**: Prevents concurrent edit conflicts
+### How It Works
+- **User Annotations:**  
+  Engineers can add, edit, resize, or delete anomaly boxes in the image viewer.  
+  Each change is automatically saved to the backend with both the AI’s original JSON (`originalResultJson`) and the user-corrected JSON (`modifiedResultJson`).
 
-### 🎓 Best Practices for Annotation
+- **Backend Aggregation:**  
+  The backend service (`ModelFeedbackService`) compares AI and human annotations and calculates three deltas per label:  
+  - **Count change:** how many boxes were added or removed  
+  - **Area change:** how much total annotated area grew or shrank  
+  - **Confidence change:** how humans adjusted model certainty  
 
-#### For Quality Annotations
+  These signals are combined and scaled by a configurable **learning rate** (e.g., 0.0001 = 0.01 %) to create a per-label bias.  
+  Each bias is updated smoothly using an exponential moving average (EMA).
 
-1. **Be Consistent**: Use the same criteria for similar anomalies across images
-2. **Precise Boundaries**: Draw tight bounding boxes around actual thermal anomalies
-3. **Appropriate Types**: Choose the most specific anomaly category available
-4. **Add Context**: Use comments to explain unusual or borderline cases
-5. **Review AI Suggestions**: Validate AI detections rather than starting from scratch
+- **Confidence Adjustment:**  
+  During inference, each detection’s confidence is gently adjusted using its bias:  
+  - Positive bias → increases confidence (model was under-sensitive)  
+  - Negative bias → decreases confidence (model was over-confident)  
 
-#### For Training Data Generation
+- **Global Confidence Bias:**  
+  The average of all label biases provides a single numeric trend indicator displayed in the UI:  
+  - Positive → model is too conservative  
+  - Negative → model is too confident  
+  - Near 0 → model and humans agree  
 
-1. **Complete Coverage**: Ensure all visible anomalies are annotated
-2. **Negative Examples**: Mark areas that look suspicious but are actually normal
-3. **Edge Cases**: Pay special attention to unusual or rare anomaly presentations
-4. **Confidence Calibration**: Adjust AI confidence scores based on actual severity
-5. **Balanced Dataset**: Include diverse anomaly types and severities
+- **Learning Rate Control:**  
+  Users can tune how strongly the model responds to feedback:  
+  - Very low (0.00001) – minimal effect, slow adaptation  
+  - Default (0.00010) – gentle, audit-friendly updates  
+  - Moderate (0.001) – faster adaptation  
+  - High (>0.01) – aggressive biasing, may cause instability  
 
-### 🚀 Future Enhancements
+- **User Interface:**  
+  The ML Settings page displays the current learning rate, global confidence bias, and per-label impact.  
+  Saving settings instantly updates backend parameters.
 
-**Planned Features**:
-- **Collaborative Annotation**: Multiple users working on the same image simultaneously
-- **AI Suggestion Refinement**: More sophisticated active learning integration
-- **Custom Annotation Types**: User-defined anomaly categories for specialized use cases
-- **Batch Processing**: Apply annotations across multiple similar images
-- **Quality Metrics**: Automated scoring of annotation completeness and accuracy
+### Result
+- Human corrections are automatically stored and analyzed.  
+- Per-label biases continuously align the AI with expert judgment.  
+- The system adapts in real time without retraining.  
+- All feedback snapshots are versioned for later auditing or model retraining.
+**For a more detailed explanation, see the [FEEDBACK_INTEGRATION.md](./docs/FEEDBACK_INTEGRATION.md) file.**
+---
 
 ## 🗄️ Database Architecture
 
