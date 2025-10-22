@@ -271,14 +271,13 @@ public class AnomalyAnalysisService {
         Path relativeFeedbackPath = currentDir.relativize(feedbackFile.toAbsolutePath());
         String wslFeedbackPath = projectRootWSL + "/" + relativeFeedbackPath.toString().replace('\\', '/');
 
-
         logger.info("Using detection sensitivity: {}", sensitivity);
         logger.info("Feedback learning rate: {}", learningRate);
         logger.info("Feedback adjustment global bias: {}", feedbackSummary.getGlobalAdjustment());
         if (feedbackPayload.hasAdjustments()) {
             logger.info("Applying {} label adjustments from feedback", feedbackSummary.getLabelFeedback().size());
-            feedbackSummary.getLabelFeedback().stream().limit(3).forEach(f ->
-                    logger.info("  -> {}: adj={}, countΔ={}, areaRatio={}, confΔ={}",
+            feedbackSummary.getLabelFeedback().stream().limit(3)
+                    .forEach(f -> logger.info("  -> {}: adj={}, countΔ={}, areaRatio={}, confΔ={}",
                             f.getLabel(),
                             f.getAdjustment(),
                             f.getAvgCountDelta(),

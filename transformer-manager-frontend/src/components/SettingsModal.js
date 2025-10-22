@@ -1,5 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { Modal, Button, Form, Alert, Row, Col, Spinner } from "react-bootstrap";
+import {
+  Modal,
+  Button,
+  Form,
+  Alert,
+  Row,
+  Col,
+  Spinner,
+  Table,
+  Badge,
+} from "react-bootstrap";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faCog,
@@ -283,6 +293,7 @@ const SettingsModal = ({ show, onHide }) => {
         </Form>
 
         <FeedbackSummaryPanel summary={settings.feedbackSummary} />
+        <FeedbackHistoryPanel history={settings.feedbackHistory} />
       </Modal.Body>
 
       <Modal.Footer>
@@ -315,6 +326,13 @@ const SettingsModal = ({ show, onHide }) => {
 
 export default SettingsModal;
 
+const formatNumber = (value, digits = 6) => {
+  if (typeof value !== "number" || Number.isNaN(value)) {
+    return value ?? "-";
+  }
+  return value.toFixed(digits);
+};
+
 const FeedbackSummaryPanel = ({ summary }) => {
   if (!summary) {
     return (
@@ -327,13 +345,6 @@ const FeedbackSummaryPanel = ({ summary }) => {
   const labels = Array.isArray(summary.labels) ? summary.labels : [];
   const topLabels = labels.slice(0, 3);
   const remaining = Math.max(0, labels.length - topLabels.length);
-
-  const formatNumber = (value, digits = 6) => {
-    if (typeof value !== "number" || Number.isNaN(value)) {
-      return value ?? "-";
-    }
-    return value.toFixed(digits);
-  };
 
   const generatedAt = summary.generatedAt
     ? new Date(summary.generatedAt).toLocaleString()
@@ -379,6 +390,80 @@ const FeedbackSummaryPanel = ({ summary }) => {
           )}
         </ul>
       )}
+    </div>
+  );
+};
+
+const FeedbackHistoryPanel = ({ history }) => {
+  const entries = Array.isArray(history) ? [...history].reverse() : [];
+
+  if (entries.length === 0) {
+    return (
+      <div className="mt-4 small text-muted">
+        History will appear here after the first analysis run with feedback.
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4">
+      <div className="d-flex justify-content-between align-items-center mb-2">
+        <h6 className="mb-0">Feedback History</h6>
+        <small className="text-muted">
+          Showing last {entries.length} snapshot{entries.length === 1 ? "" : "s"}
+        </small>
+      </div>
+      <Table striped bordered hover responsive size="sm" className="mb-0">
+        <thead>
+          <tr>
+            <th style={{ minWidth: "160px" }}>Captured</th>
+            <th>Global Δ</th>
+            <th>Learning Rate</th>
+            <th>Annotations</th>
+            <th>Highlighted Labels</th>
+          </tr>
+        </thead>
+        <tbody>
+          {entries.map((entry) => {
+            const labels = Array.isArray(entry.labels) ? entry.labels.slice(0, 3) : [];
+            const remaining = entry.labels && entry.labels.length > labels.length
+              ? entry.labels.length - labels.length
+              : 0;
+            return (
+              <tr key={entry.id ?? entry.createdAt}>
+                <td>{
+                  entry.createdAt
+                    ? new Date(entry.createdAt).toLocaleString()
+                    : "-"
+                }</td>
+                <td>{formatNumber(entry.globalAdjustment)}</td>
+                <td>{formatNumber(entry.learningRate, 5)}</td>
+                <td>
+                  <Badge bg="secondary">{entry.annotationSamples}</Badge>
+                </td>
+                <td>
+                  {labels.length > 0 ? (
+                    <div className="d-flex flex-wrap gap-2">
+                      {labels.map((label) => (
+                        <Badge bg={label.adjustment >= 0 ? "success" : "danger"} key={label.label}>
+                          {label.label}: {formatNumber(label.adjustment, 5)}
+                        </Badge>
+                      ))}
+                      {remaining > 0 && (
+                        <Badge bg="light" text="dark">
+                          +{remaining} more
+                        </Badge>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-muted">No label deltas</span>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </Table>
     </div>
   );
 };

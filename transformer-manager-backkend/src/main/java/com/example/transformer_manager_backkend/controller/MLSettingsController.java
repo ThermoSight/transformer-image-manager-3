@@ -9,6 +9,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 
 @RestController
 @RequestMapping("/api/ml-settings")
@@ -88,6 +90,35 @@ public class MLSettingsController {
         double learningRate = mlSettingsService.getFeedbackLearningRate();
         ModelFeedbackService.FeedbackSummary summary = modelFeedbackService.generateFeedbackSummary(learningRate);
         return ResponseEntity.ok(FeedbackSummaryResponse.from(summary));
+    }
+
+    /**
+     * Get historical feedback snapshots
+     */
+    @GetMapping("/feedback-history")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('USER')")
+    public ResponseEntity<List<FeedbackSnapshotResponse>> getFeedbackHistory(
+            @RequestParam(name = "limit", required = false) Integer limit,
+            @RequestParam(name = "since", required = false) String since) {
+
+        List<ModelFeedbackService.FeedbackSnapshotDTO> snapshots;
+        if (since != null && !since.isBlank()) {
+            try {
+                LocalDateTime parsed = LocalDateTime.parse(since);
+                snapshots = modelFeedbackService.getSnapshotHistorySince(parsed);
+            } catch (DateTimeParseException e) {
+                return ResponseEntity.badRequest()
+                        .body(List.of());
+            }
+        } else {
+            int effectiveLimit = (limit != null && limit > 0) ? limit : 50;
+            snapshots = modelFeedbackService.getSnapshotHistory(effectiveLimit);
+        }
+
+        List<FeedbackSnapshotResponse> response = snapshots.stream()
+                .map(FeedbackSnapshotResponse::from)
+                .toList();
+        return ResponseEntity.ok(response);
     }
 
     /**
@@ -305,6 +336,58 @@ public class MLSettingsController {
 
         public int getSamples() {
             return samples;
+        }
+    }
+
+    public static class FeedbackSnapshotResponse {
+        private Long id;
+        private String createdAt;
+        private double learningRate;
+        private double globalAdjustment;
+        private int annotationSamples;
+        private com.fasterxml.jackson.databind.node.ObjectNode labelAdjustments;
+        private List<LabelFeedbackDTO> labels;
+
+        public static FeedbackSnapshotResponse from(ModelFeedbackService.FeedbackSnapshotDTO dto) {
+            FeedbackSnapshotResponse response = new FeedbackSnapshotResponse();
+            response.id = dto.getId();
+            response.createdAt = dto.getCreatedAt() != null ? dto.getCreatedAt().toString() : null;
+            response.learningRate = dto.getLearningRate();
+            response.globalAdjustment = dto.getGlobalAdjustment();
+            response.annotationSamples = dto.getAnnotationSamples();
+            response.labelAdjustments = dto.getLabelAdjustments();
+            response.labels = dto.getLabels().stream()
+                    .map(LabelFeedbackDTO::from)
+                    .toList();
+            return response;
+        }
+
+        public Long getId() {
+            return id;
+        }
+
+        public String getCreatedAt() {
+            return createdAt;
+        }
+
+        public double getLearningRate() {
+            return learningRate;
+        }
+
+        public double getGlobalAdjustment() {
+            return globalAdjustment;
+        }
+
+        public int getAnnotationSamples() {
+            return annotationSamples;
+        }
+
+        public com.fasterxml.jackson.databind.node.ObjectNode getLabelAdjustments() {
+            return labelAdjustments;
+        }
+
+        public List<LabelFeedbackDTO> getLabels() {
+            return labels;
         }
     }
     public static class SettingRequest {

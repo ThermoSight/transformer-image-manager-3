@@ -1,7 +1,9 @@
 package com.example.transformer_manager_backkend.service;
 
 import com.example.transformer_manager_backkend.entity.Annotation;
+import com.example.transformer_manager_backkend.entity.FeedbackSnapshot;
 import com.example.transformer_manager_backkend.repository.AnnotationRepository;
+import com.example.transformer_manager_backkend.repository.FeedbackSnapshotRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -12,12 +14,16 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 /**
  * Aggregates human annotation feedback and produces lightweight adjustment signals
@@ -29,10 +35,13 @@ public class ModelFeedbackService {
     private static final Logger logger = LoggerFactory.getLogger(ModelFeedbackService.class);
 
     private final AnnotationRepository annotationRepository;
+    private final FeedbackSnapshotRepository feedbackSnapshotRepository;
     private final ObjectMapper objectMapper;
 
-    public ModelFeedbackService(AnnotationRepository annotationRepository) {
+    public ModelFeedbackService(AnnotationRepository annotationRepository,
+            FeedbackSnapshotRepository feedbackSnapshotRepository) {
         this.annotationRepository = annotationRepository;
+        this.feedbackSnapshotRepository = feedbackSnapshotRepository;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -164,7 +173,9 @@ public class ModelFeedbackService {
             detailObject.put("samples", feedback.getSamples());
         }
 
-        return new FeedbackPayload(summary, root);
+        FeedbackPayload payload = new FeedbackPayload(summary, root);
+        persistSnapshot(payload);
+        return payload;
     }
 
     private Map<String, LabelStats> extractLabelStats(String json) throws Exception {
@@ -202,6 +213,134 @@ public class ModelFeedbackService {
 
     private double clamp(double value, double min, double max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    public List<FeedbackSnapshotDTO> getSnapshotHistory(int limit) {
+        int pageSize = limit > 0 ? Math.min(limit, 500) : 50;
+        List<FeedbackSnapshot> snapshots = feedbackSnapshotRepository
+                .findAll(PageRequest.of(0, pageSize, Sort.by(Sort.Direction.DESC, "createdAt")))
+                .getContent();
+        return snapshots.stream()
+                .map(this::toDto)
+                .sorted(Comparator.comparing(FeedbackSnapshotDTO::getCreatedAt))
+                .collect(Collectors.toList());
+    }
+
+    public List<FeedbackSnapshotDTO> getSnapshotHistorySince(LocalDateTime since) {
+        List<FeedbackSnapshot> snapshots = feedbackSnapshotRepository
+                .findByCreatedAtAfterOrderByCreatedAtDesc(since);
+        return snapshots.stream()
+                .map(this::toDto)
+                .sorted(Comparator.comparing(FeedbackSnapshotDTO::getCreatedAt))
+                .collect(Collectors.toList());
+    }
+
+    private void persistSnapshot(FeedbackPayload payload) {
+        try {
+            JsonNode adjustmentsNode = payload.getPayload().get("label_adjustments");
+            if (adjustmentsNode == null || adjustmentsNode.isNull()) {
+                adjustmentsNode = objectMapper.createObjectNode();
+            }
+            JsonNode labelFeedbackNode = payload.getPayload().get("label_feedback");
+            if (labelFeedbackNode == null || labelFeedbackNode.isNull()) {
+                labelFeedbackNode = objectMapper.createArrayNode();
+            }
+            String adjustmentsJson = objectMapper.writeValueAsString(adjustmentsNode);
+            String labelFeedbackJson = objectMapper.writeValueAsString(labelFeedbackNode);
+            FeedbackSnapshot snapshot = new FeedbackSnapshot(
+                    payload.getSummary().getLearningRate(),
+                    payload.getSummary().getGlobalAdjustment(),
+                    payload.getSummary().getAnnotationSamples(),
+                    adjustmentsJson,
+                    labelFeedbackJson);
+            feedbackSnapshotRepository.save(snapshot);
+        } catch (Exception e) {
+            logger.warn("Failed to persist feedback snapshot", e);
+        }
+    }
+
+    private FeedbackSnapshotDTO toDto(FeedbackSnapshot snapshot) {
+        try {
+            ObjectNode adjustments = (ObjectNode) objectMapper.readTree(snapshot.getLabelAdjustmentsJson());
+            ArrayNode labelDetails = (ArrayNode) objectMapper.readTree(snapshot.getLabelFeedbackJson());
+            List<ModelFeedbackService.LabelFeedback> labels = new ArrayList<>();
+            labelDetails.forEach(node -> labels.add(new LabelFeedback(
+                    node.path("label").asText(),
+                    node.path("avg_count_delta").asDouble(0.0),
+                    node.path("avg_area_ratio").asDouble(0.0),
+                    node.path("avg_confidence_delta").asDouble(0.0),
+                    node.path("adjustment").asDouble(0.0),
+                    node.path("samples").asInt(0)
+            )));
+
+            return new FeedbackSnapshotDTO(
+                    snapshot.getId(),
+                    snapshot.getCreatedAt(),
+                    snapshot.getLearningRate(),
+                    snapshot.getGlobalAdjustment(),
+                    snapshot.getAnnotationSamples(),
+                    adjustments,
+                    labels);
+        } catch (Exception e) {
+            logger.warn("Failed to convert feedback snapshot {}", snapshot.getId(), e);
+            return new FeedbackSnapshotDTO(
+                    snapshot.getId(),
+                    snapshot.getCreatedAt(),
+                    snapshot.getLearningRate(),
+                    snapshot.getGlobalAdjustment(),
+                    snapshot.getAnnotationSamples(),
+                    objectMapper.createObjectNode(),
+                    List.of());
+        }
+    }
+
+    public static class FeedbackSnapshotDTO {
+        private final Long id;
+        private final LocalDateTime createdAt;
+        private final double learningRate;
+        private final double globalAdjustment;
+        private final int annotationSamples;
+        private final ObjectNode labelAdjustments;
+        private final List<ModelFeedbackService.LabelFeedback> labels;
+
+        public FeedbackSnapshotDTO(Long id, LocalDateTime createdAt, double learningRate, double globalAdjustment,
+                int annotationSamples, ObjectNode labelAdjustments, List<ModelFeedbackService.LabelFeedback> labels) {
+            this.id = id;
+            this.createdAt = createdAt;
+            this.learningRate = learningRate;
+            this.globalAdjustment = globalAdjustment;
+            this.annotationSamples = annotationSamples;
+            this.labelAdjustments = labelAdjustments;
+            this.labels = labels;
+        }
+
+        public Long getId() {
+            return id;
+        }
+
+        public LocalDateTime getCreatedAt() {
+            return createdAt;
+        }
+
+        public double getLearningRate() {
+            return learningRate;
+        }
+
+        public double getGlobalAdjustment() {
+            return globalAdjustment;
+        }
+
+        public int getAnnotationSamples() {
+            return annotationSamples;
+        }
+
+        public ObjectNode getLabelAdjustments() {
+            return labelAdjustments;
+        }
+
+        public List<ModelFeedbackService.LabelFeedback> getLabels() {
+            return labels;
+        }
     }
 
     /**

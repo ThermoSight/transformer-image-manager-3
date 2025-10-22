@@ -64,7 +64,7 @@ if [[ ! -d "$VENV_PATH" ]]; then
   echo "[ERROR] Virtual environment not found." >&2
   echo "        Tried: '$VENV_PATH' (and '../.venv')." >&2
   echo "        Provide one via --venv /path/to/venv or env VENV=/path/to/venv." >&2
-  echo "        Example: VENV='/mnt/f/github/transformer-image-manager-2/automatic-anamoly-detection/.venv' ./run_inference.sh" >&2
+  echo "        VENV='/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/automatic-anamoly-detection/.venv' ./run_inference.sh" >&2
   exit 1 
 fi
 

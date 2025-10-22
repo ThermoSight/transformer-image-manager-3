@@ -29,6 +29,15 @@ const SensitivityIndicator = () => {
   const { level, color, icon } = getSensitivityLevel(sensitivity);
   const feedbackRate = settings.feedbackLearningRate;
   const feedbackSummary = settings.feedbackSummary;
+  const history = Array.isArray(settings.feedbackHistory)
+    ? settings.feedbackHistory
+    : [];
+  const lastSnapshot = history.length > 0 ? history[history.length - 1] : null;
+  const priorSnapshot = history.length > 1 ? history[history.length - 2] : null;
+  const globalDelta =
+    lastSnapshot && priorSnapshot
+      ? lastSnapshot.globalAdjustment - priorSnapshot.globalAdjustment
+      : null;
   const formatSmallNumber = (value, digits = 6) => {
     if (typeof value !== "number" || Number.isNaN(value)) {
       return "-";
@@ -96,6 +105,16 @@ const SensitivityIndicator = () => {
                 }.`
               : "Awaiting user feedback to calibrate confidences."}
           </div>
+          {lastSnapshot && (
+            <div className="small text-muted">
+              Last snapshot {new Date(lastSnapshot.createdAt).toLocaleString()}
+              {globalDelta !== null && (
+                <>
+                  {" "}(Δglobal {formatSmallNumber(globalDelta)})
+                </>
+              )}
+            </div>
+          )}
         </Card.Body>
       </Card>
 

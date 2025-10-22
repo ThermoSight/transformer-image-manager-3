@@ -18,6 +18,7 @@ export const SettingsProvider = ({ children }) => {
     detectionSensitivity: 1.0,
     feedbackLearningRate: 0.0001,
     feedbackSummary: null,
+    feedbackHistory: [],
     loading: false,
     error: null,
   });
@@ -47,10 +48,11 @@ export const SettingsProvider = ({ children }) => {
       setSettings((prev) => ({ ...prev, loading: true, error: null }));
 
       const config = getAuthConfig();
-      const [sensitivityRes, feedbackRateRes, summaryRes] = await Promise.all([
+      const [sensitivityRes, feedbackRateRes, summaryRes, historyRes] = await Promise.all([
         axios.get("http://localhost:8080/api/ml-settings/sensitivity", config),
         axios.get("http://localhost:8080/api/ml-settings/feedback-rate", config),
         axios.get("http://localhost:8080/api/ml-settings/feedback-summary", config),
+        axios.get("http://localhost:8080/api/ml-settings/feedback-history?limit=25", config),
       ]);
 
       setSettings((prev) => ({
@@ -58,6 +60,7 @@ export const SettingsProvider = ({ children }) => {
         detectionSensitivity: sensitivityRes.data.sensitivity,
         feedbackLearningRate: feedbackRateRes.data.learningRate,
         feedbackSummary: summaryRes.data,
+        feedbackHistory: historyRes.data || [],
         loading: false,
       }));
     } catch (error) {
@@ -85,11 +88,16 @@ export const SettingsProvider = ({ children }) => {
         "http://localhost:8080/api/ml-settings/feedback-summary",
         getAuthConfig()
       );
+      const historyRes = await axios.get(
+        "http://localhost:8080/api/ml-settings/feedback-history?limit=25",
+        getAuthConfig()
+      );
 
       setSettings((prev) => ({
         ...prev,
         detectionSensitivity: response.data.sensitivity,
         feedbackSummary: summaryRes.data,
+        feedbackHistory: historyRes.data || prev.feedbackHistory,
         loading: false,
       }));
 
@@ -123,11 +131,16 @@ export const SettingsProvider = ({ children }) => {
         "http://localhost:8080/api/ml-settings/feedback-summary",
         getAuthConfig()
       );
+      const historyRes = await axios.get(
+        "http://localhost:8080/api/ml-settings/feedback-history?limit=25",
+        getAuthConfig()
+      );
 
       setSettings((prev) => ({
         ...prev,
         feedbackLearningRate: response.data.learningRate,
         feedbackSummary: summaryRes.data,
+        feedbackHistory: historyRes.data || prev.feedbackHistory,
         loading: false,
       }));
 
@@ -155,9 +168,14 @@ export const SettingsProvider = ({ children }) => {
         "http://localhost:8080/api/ml-settings/feedback-summary",
         getAuthConfig()
       );
+      const historyRes = await axios.get(
+        "http://localhost:8080/api/ml-settings/feedback-history?limit=25",
+        getAuthConfig()
+      );
       setSettings((prev) => ({
         ...prev,
         feedbackSummary: summaryRes.data,
+        feedbackHistory: historyRes.data || prev.feedbackHistory,
       }));
       return summaryRes.data;
     } catch (error) {
@@ -172,6 +190,7 @@ export const SettingsProvider = ({ children }) => {
     updateDetectionSensitivity,
     updateFeedbackLearningRate,
     refreshFeedbackSummary,
+    loadSettings,
   };
 
   return (
