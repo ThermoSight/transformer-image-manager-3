@@ -503,6 +503,14 @@ ls automatic-anamoly-detection/Model_Inference/config/patchcore_transformers.yam
 - **Visual result overlay** on original images
 - **JSON export** for integration with other systems
 
+### Interactive Annotation System
+
+- **Visual annotation editor** with canvas-based drawing interface
+- **Real-time bounding box editing** with drag, resize, and move operations
+- **AI-generated and user-added annotations** with clear distinction
+- **Comprehensive annotation management** with undo/redo functionality
+- **Export capabilities** for training data generation
+- **Feedback integration** for continuous model improvement
 
 ## 🔒 Security & Performance
 
