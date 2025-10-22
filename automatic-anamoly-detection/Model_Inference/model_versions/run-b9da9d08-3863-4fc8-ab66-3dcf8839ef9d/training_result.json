@@ -1,0 +1,39 @@
+{
+  "status": "ok",
+  "message": "Model version created",
+  "version_tag": "v0003",
+  "run_id": "b9da9d08-3863-4fc8-ab66-3dcf8839ef9d",
+  "created_at": "2025-10-22T05:09:49.164648Z",
+  "dataset_record_count": 4,
+  "previous_dataset_count": 3,
+  "box_count": 19,
+  "previous_box_count": 12,
+  "appended_annotations": 1,
+  "appended_boxes": 7,
+  "class_counts": {
+    "Point Overload (Potential)": 3,
+    "Point Overload (Faulty)": 5,
+    "Loose Joint (Faulty)": 2,
+    "Tiny Potential Spot": 4,
+    "Tiny Faulty Spot": 3,
+    "Full Wire Overload (Faulty)": 2
+  },
+  "action_counts": {
+    "MODIFIED": 7,
+    "UNCHANGED": 10,
+    "ADDED": 2
+  },
+  "avg_box_area": 11214.315789473685,
+  "min_box_area": 64,
+  "max_box_area": 131400,
+  "avg_confidence": 0.57925,
+  "annotation_ids": [
+    4
+  ],
+  "model_path": "F:\\github\\transformer-image-manager-3\\automatic-anamoly-detection\\Model_Inference\\model_versions\\v0003\\model.ckpt",
+  "relative_model_path": "v0003\\model.ckpt",
+  "version_directory": "F:\\github\\transformer-image-manager-3\\automatic-anamoly-detection\\Model_Inference\\model_versions\\v0003",
+  "notes": "Manual trigger from dashboard",
+  "summary": "Run b9da9d08-3863-4fc8-ab66-3dcf8839ef9d appended 1 annotations and 7 boxes",
+  "embedded_feedback": false
+}
