@@ -1,0 +1,265 @@
+{
+  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_21_1761139463621/input/1761139461425_T1_faulty_001.jpg",
+  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_21_1761139463621/output/boxed/1761139461425_T1_faulty_001_boxed.jpg",
+  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_21_1761139463621/output/masks/1761139461425_T1_faulty_001_mask.png",
+  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_21_1761139463621/output/filtered/1761139461425_T1_faulty_001_filtered.png",
+  "label": "Loose Joint (Faulty)",
+  "boxes": [
+    {
+      "box": [
+        160,
+        160,
+        320,
+        320
+      ],
+      "type": "Loose Joint (Faulty)",
+      "confidence": 0.749
+    },
+    {
+      "box": [
+        384,
+        411,
+        94,
+        102
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.728
+    },
+    {
+      "box": [
+        279,
+        526,
+        36,
+        66
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.743
+    },
+    {
+      "box": [
+        369,
+        283,
+        26,
+        38
+      ],
+      "type": "Tiny Faulty Spot",
+      "confidence": 0.599
+    },
+    {
+      "box": [
+        243,
+        572,
+        4,
+        12
+      ],
+      "type": "Tiny Faulty Spot",
+      "confidence": 0.708
+    },
+    {
+      "box": [
+        162,
+        256,
+        3,
+        11
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.689
+    },
+    {
+      "box": [
+        543,
+        323,
+        3,
+        9
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.68
+    }
+  ],
+  "feedback_adjustments": {
+    "applied": true,
+    "global_adjustment": 0.003155,
+    "learning_rate": 0.05,
+    "generated_at": "2025-10-22T18:54:23.638015100",
+    "source": "annotation_feedback",
+    "total_annotations_considered": 1,
+    "label_adjustments": {
+      "Tiny Potential Spot": {
+        "adjustment": 0.0,
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 1
+      },
+      "Loose Joint (Faulty)": {
+        "adjustment": 0.01262089843762089,
+        "avg_count_delta": 1.0,
+        "avg_area_ratio": -0.8252734374919407,
+        "avg_confidence_delta": 0.0,
+        "samples": 1
+      },
+      "Point Overload (Faulty)": {
+        "adjustment": 0.0,
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 1
+      },
+      "Tiny Faulty Spot": {
+        "adjustment": 0.0,
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 1
+      }
+    },
+    "label_feedback": [
+      {
+        "label": "Tiny Potential Spot",
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.0,
+        "samples": 1
+      },
+      {
+        "label": "Loose Joint (Faulty)",
+        "avg_count_delta": 1.0,
+        "avg_area_ratio": -0.8252734374919407,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.01262089843762089,
+        "samples": 1
+      },
+      {
+        "label": "Point Overload (Faulty)",
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.0,
+        "samples": 1
+      },
+      {
+        "label": "Tiny Faulty Spot",
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.0,
+        "samples": 1
+      }
+    ],
+    "per_box": [
+      {
+        "label": "Loose Joint (Faulty)",
+        "original_confidence": 0.733,
+        "adjustment": 0.015776,
+        "components": {
+          "global": 0.003155,
+          "label": 0.012621
+        },
+        "adjusted_confidence": 0.749,
+        "source_metrics": {
+          "avg_count_delta": 1.0,
+          "avg_area_ratio": -0.8252734374919407,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      },
+      {
+        "label": "Point Overload (Faulty)",
+        "original_confidence": 0.725,
+        "adjustment": 0.003155,
+        "components": {
+          "global": 0.003155,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.728,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      },
+      {
+        "label": "Point Overload (Faulty)",
+        "original_confidence": 0.74,
+        "adjustment": 0.003155,
+        "components": {
+          "global": 0.003155,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.743,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      },
+      {
+        "label": "Tiny Faulty Spot",
+        "original_confidence": 0.596,
+        "adjustment": 0.003155,
+        "components": {
+          "global": 0.003155,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.599,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      },
+      {
+        "label": "Tiny Faulty Spot",
+        "original_confidence": 0.705,
+        "adjustment": 0.003155,
+        "components": {
+          "global": 0.003155,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.708,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      },
+      {
+        "label": "Tiny Potential Spot",
+        "original_confidence": 0.686,
+        "adjustment": 0.003155,
+        "components": {
+          "global": 0.003155,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.689,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      },
+      {
+        "label": "Tiny Potential Spot",
+        "original_confidence": 0.677,
+        "adjustment": 0.003155,
+        "components": {
+          "global": 0.003155,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.68,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      }
+    ]
+  }
+}

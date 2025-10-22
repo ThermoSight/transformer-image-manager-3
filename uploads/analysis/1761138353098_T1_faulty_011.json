@@ -1,0 +1,233 @@
+{
+  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_16_1761138802190/input/1761138353098_T1_faulty_011.jpg",
+  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_16_1761138802190/output/boxed/1761138353098_T1_faulty_011_boxed.jpg",
+  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_16_1761138802190/output/masks/1761138353098_T1_faulty_011_mask.png",
+  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_16_1761138802190/output/filtered/1761138353098_T1_faulty_011_filtered.png",
+  "label": "Unknown",
+  "boxes": [
+    {
+      "box": [
+        467,
+        79,
+        151,
+        34
+      ],
+      "type": "Point Overload (Potential)",
+      "confidence": 0.705
+    },
+    {
+      "box": [
+        437,
+        244,
+        47,
+        62
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.635
+    },
+    {
+      "box": [
+        329,
+        289,
+        17,
+        21
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.653
+    },
+    {
+      "box": [
+        124,
+        578,
+        5,
+        14
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.64
+    },
+    {
+      "box": [
+        76,
+        439,
+        5,
+        9
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.6
+    },
+    {
+      "box": [
+        406,
+        420,
+        9,
+        4
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.659
+    }
+  ],
+  "feedback_adjustments": {
+    "applied": true,
+    "global_adjustment": 0.0,
+    "learning_rate": 0.001,
+    "generated_at": "2025-10-22T18:43:22.223539200",
+    "source": "annotation_feedback",
+    "total_annotations_considered": 1,
+    "label_adjustments": {
+      "Tiny Potential Spot": {
+        "adjustment": 0.0,
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 1
+      },
+      "Loose Joint (Faulty)": {
+        "adjustment": 0.0,
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 1
+      },
+      "Point Overload (Faulty)": {
+        "adjustment": 0.0,
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 1
+      },
+      "Tiny Faulty Spot": {
+        "adjustment": 0.0,
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "samples": 1
+      }
+    },
+    "label_feedback": [
+      {
+        "label": "Tiny Potential Spot",
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.0,
+        "samples": 1
+      },
+      {
+        "label": "Loose Joint (Faulty)",
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.0,
+        "samples": 1
+      },
+      {
+        "label": "Point Overload (Faulty)",
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.0,
+        "samples": 1
+      },
+      {
+        "label": "Tiny Faulty Spot",
+        "avg_count_delta": 0.0,
+        "avg_area_ratio": 0.0,
+        "avg_confidence_delta": 0.0,
+        "adjustment": 0.0,
+        "samples": 1
+      }
+    ],
+    "per_box": [
+      {
+        "label": "Point Overload (Potential)",
+        "original_confidence": 0.705,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.705
+      },
+      {
+        "label": "Point Overload (Faulty)",
+        "original_confidence": 0.635,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.635,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      },
+      {
+        "label": "Point Overload (Faulty)",
+        "original_confidence": 0.653,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.653,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      },
+      {
+        "label": "Tiny Potential Spot",
+        "original_confidence": 0.64,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.64,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      },
+      {
+        "label": "Tiny Potential Spot",
+        "original_confidence": 0.6,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.6,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      },
+      {
+        "label": "Tiny Potential Spot",
+        "original_confidence": 0.659,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.659,
+        "source_metrics": {
+          "avg_count_delta": 0.0,
+          "avg_area_ratio": 0.0,
+          "avg_confidence_delta": 0.0,
+          "samples": 1
+        }
+      }
+    ]
+  }
+}

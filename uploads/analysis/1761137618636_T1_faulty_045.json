@@ -1,0 +1,101 @@
+{
+  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/input/1761137618636_T1_faulty_045.jpg",
+  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/output/boxed/1761137618636_T1_faulty_045_boxed.jpg",
+  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/output/masks/1761137618636_T1_faulty_045_mask.png",
+  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_5_1761137910569/output/filtered/1761137618636_T1_faulty_045_filtered.png",
+  "label": "Normal",
+  "boxes": [
+    {
+      "box": [
+        249,
+        266,
+        54,
+        51
+      ],
+      "type": "Point Overload (Potential)",
+      "confidence": 0.598
+    },
+    {
+      "box": [
+        369,
+        286,
+        13,
+        18
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.727
+    },
+    {
+      "box": [
+        373,
+        273,
+        27,
+        35
+      ],
+      "type": "Tiny Faulty Spot",
+      "confidence": 0.621
+    },
+    {
+      "box": [
+        375,
+        279,
+        9,
+        6
+      ],
+      "type": "Tiny Potential Spot",
+      "confidence": 0.634
+    }
+  ],
+  "feedback_adjustments": {
+    "applied": true,
+    "global_adjustment": 0.0,
+    "learning_rate": 0.0001,
+    "generated_at": "2025-10-22T18:28:30.579347700",
+    "source": "annotation_feedback",
+    "total_annotations_considered": 0,
+    "label_adjustments": {},
+    "label_feedback": [],
+    "per_box": [
+      {
+        "label": "Point Overload (Potential)",
+        "original_confidence": 0.598,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.598
+      },
+      {
+        "label": "Point Overload (Faulty)",
+        "original_confidence": 0.727,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.727
+      },
+      {
+        "label": "Tiny Faulty Spot",
+        "original_confidence": 0.621,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.621
+      },
+      {
+        "label": "Tiny Potential Spot",
+        "original_confidence": 0.634,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.634
+      }
+    ]
+  }
+}

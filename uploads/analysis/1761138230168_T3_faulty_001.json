@@ -1,0 +1,61 @@
+{
+  "image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_11_1761138425243/input/1761138230168_T3_faulty_001.png",
+  "boxed_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_11_1761138425243/output/boxed/1761138230168_T3_faulty_001_boxed.png",
+  "mask_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_11_1761138425243/output/masks/1761138230168_T3_faulty_001_mask.png",
+  "filtered_image": "/mnt/c/Users/HP/Desktop/Sem 7/Software Design Competition/transformer-image-manager-3/temp/anomaly-analysis/job_11_1761138425243/output/filtered/1761138230168_T3_faulty_001_filtered.png",
+  "label": "Unknown",
+  "boxes": [
+    {
+      "box": [
+        41,
+        78,
+        42,
+        61
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.691
+    },
+    {
+      "box": [
+        212,
+        36,
+        19,
+        32
+      ],
+      "type": "Point Overload (Faulty)",
+      "confidence": 0.687
+    }
+  ],
+  "feedback_adjustments": {
+    "applied": true,
+    "global_adjustment": 0.0,
+    "learning_rate": 0.001,
+    "generated_at": "2025-10-22T18:37:05.258100300",
+    "source": "annotation_feedback",
+    "total_annotations_considered": 0,
+    "label_adjustments": {},
+    "label_feedback": [],
+    "per_box": [
+      {
+        "label": "Point Overload (Faulty)",
+        "original_confidence": 0.691,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.691
+      },
+      {
+        "label": "Point Overload (Faulty)",
+        "original_confidence": 0.687,
+        "adjustment": 0.0,
+        "components": {
+          "global": 0.0,
+          "label": 0.0
+        },
+        "adjusted_confidence": 0.687
+      }
+    ]
+  }
+}
