@@ -48,6 +48,14 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
   const [imageRefreshToken, setImageRefreshToken] = useState(Date.now());
 
   const { token, isAuthenticated } = useAuth();
+  const selectedFeedback = selectedJson?.feedback_adjustments;
+
+  const formatSmallNumber = (value, digits = 6) => {
+    if (typeof value !== "number" || Number.isNaN(value)) {
+      return "-";
+    }
+    return value.toFixed(digits);
+  };
 
   useEffect(() => {
     if (inspectionId) {
@@ -305,6 +313,25 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
           <Row>
             {maintenanceImages.map((image) => {
               const job = getImageJob(image.id);
+              let parsedResult = null;
+              let feedbackAdjustments = null;
+              if (job && job.resultJson) {
+                try {
+                  parsedResult = JSON.parse(job.resultJson);
+                  feedbackAdjustments = parsedResult.feedback_adjustments;
+                } catch (err) {
+                  console.warn("Failed to parse job result JSON", err);
+                }
+              }
+              const perBoxFeedback = Array.isArray(
+                feedbackAdjustments?.per_box
+              )
+                ? feedbackAdjustments.per_box.slice(0, 2)
+                : [];
+              const remainingFeedbackCount = feedbackAdjustments?.per_box
+                ? Math.max(0, feedbackAdjustments.per_box.length - perBoxFeedback.length)
+                : 0;
+              const hasFeedback = feedbackAdjustments?.applied;
               return (
                 <Col md={6} lg={4} key={image.id} className="mb-4">
                   <Card className="h-100">
@@ -342,21 +369,80 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
                         </div>
                       )}
 
-                      {job && job.status === "COMPLETED" && job.resultJson && (
+                      {job && job.status === "COMPLETED" && (
                         <div className="mb-2">
-                          {(() => {
-                            try {
-                              const result = JSON.parse(job.resultJson);
-                              return (
-                                <Alert variant="info" className="py-2 mb-2">
-                                  <strong>Analysis Result:</strong>{" "}
-                                  {result.label}
+                          {parsedResult ? (
+                            <>
+                              <Alert variant="info" className="py-2 mb-2">
+                                <strong>Analysis Result:</strong>{" "}
+                                {parsedResult.label}
+                              </Alert>
+                              {hasFeedback && (
+                                <Alert
+                                  variant="secondary"
+                                  className="py-2 mb-2"
+                                >
+                                  <strong>Model Feedback Applied:</strong>{" "}
+                                  Δglobal {" "}
+                                  {formatSmallNumber(
+                                    feedbackAdjustments.global_adjustment
+                                  )}
+                                  {feedbackAdjustments?.learning_rate && (
+                                    <span className="text-muted">
+                                      {" "}(rate {" "}
+                                      {formatSmallNumber(
+                                        feedbackAdjustments.learning_rate,
+                                        5
+                                      )}
+                                      )
+                                    </span>
+                                  )}
+                                  <div className="small mt-1">
+                                    {perBoxFeedback.length > 0 ? (
+                                      <ul className="mb-0">
+                                        {perBoxFeedback.map((fb, idx) => (
+                                          <li key={idx}>
+                                            {fb.label}: {" "}
+                                            {formatSmallNumber(
+                                              fb.original_confidence,
+                                              3
+                                            )}
+                                            {" "}→{" "}
+                                            {formatSmallNumber(
+                                              fb.adjusted_confidence,
+                                              3
+                                            )}
+                                            {" "}(Δ {formatSmallNumber(
+                                              fb.adjustment,
+                                              5
+                                            )})
+                                          </li>
+                                        ))}
+                                        {remainingFeedbackCount > 0 && (
+                                          <li className="text-muted">
+                                            … {remainingFeedbackCount} more box
+                                            {remainingFeedbackCount === 1
+                                              ? ""
+                                              : "es"}
+                                          </li>
+                                        )}
+                                      </ul>
+                                    ) : (
+                                      <span className="text-muted">
+                                        Global bias recorded; no per-box
+                                        adjustments in this run.
+                                      </span>
+                                    )}
+                                  </div>
                                 </Alert>
-                              );
-                            } catch (e) {
-                              return null;
-                            }
-                          })()}
+                              )}
+                            </>
+                          ) : job?.resultJson ? (
+                            <Alert variant="info" className="py-2 mb-2">
+                              <strong>Analysis Result:</strong> Details
+                              available. Use “View JSON” to inspect output.
+                            </Alert>
+                          ) : null}
                         </div>
                       )}
 
@@ -493,6 +579,46 @@ const AnalysisDisplay = ({ inspectionId, images }) => {
                       ))}
                     </tbody>
                   </Table>
+                </>
+              )}
+              {selectedFeedback && (
+                <>
+                  <h6 className="mt-3">Feedback Adjustments</h6>
+                  <div className="small text-muted">
+                    Global bias {formatSmallNumber(selectedFeedback.global_adjustment)} | Learning rate{" "}
+                    {formatSmallNumber(selectedFeedback.learning_rate ?? 0, 5)} | Samples{" "}
+                    {selectedFeedback.total_annotations_considered ?? 0}
+                  </div>
+                  {selectedFeedback.per_box && selectedFeedback.per_box.length > 0 && (
+                    <>
+                      <Table striped bordered hover size="sm" className="mt-2">
+                        <thead>
+                          <tr>
+                            <th>Label</th>
+                            <th>Confidence</th>
+                            <th>Δ</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {selectedFeedback.per_box.slice(0, 5).map((fb, idx) => (
+                            <tr key={idx}>
+                              <td>{fb.label}</td>
+                              <td>
+                                {formatSmallNumber(fb.original_confidence, 3)} →{" "}
+                                {formatSmallNumber(fb.adjusted_confidence, 3)}
+                              </td>
+                              <td>{formatSmallNumber(fb.adjustment, 5)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </Table>
+                      {selectedFeedback.per_box.length > 5 && (
+                        <div className="small text-muted">
+                          … plus {selectedFeedback.per_box.length - 5} more box adjustments
+                        </div>
+                      )}
+                    </>
+                  )}
                 </>
               )}
               <details className="mt-3">
